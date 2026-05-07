@@ -24,6 +24,15 @@ webhooks:
   hmac_signing_enabled: unknown         # enablePaymentResponseHash + paymentResponseHashKey
 
 gates:
+  # Some Juspay merchant-account flags listed in CLAUDE.md's verified-gates table
+  # are intentionally omitted from this file because they are not agent-configurable:
+  #   - `mandateConfig`                            (JSON blob, not a boolean)
+  #   - `basiliskKeyId`, `encryptionKeyIds`        (JWE key material, not a toggle)
+  #   - `enabled`                                  (master kill-switch, not merchant-toggleable)
+  #   - `enableSuccessRateBasedGatewayElimination` (internal tuning, set by Juspay)
+  # If you need to interact with any of these, contact Juspay support — they are
+  # configured at the account level rather than via this file.
+
   # ──────────────────────────────────────────────────────────────────────────
   # Loud failures — request rejected (HTTP 4xx) if the gate is disabled
   # ──────────────────────────────────────────────────────────────────────────

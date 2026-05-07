@@ -131,6 +131,9 @@ metadata:
 
 Use this list when writing the **Merchant Enablement** section of skill cards. Verified against `euler-workspace-5/euler-db/src/Euler/DB/Storage/Types/MerchantAccount.hs` and gate-check sites in `euler-api-txns/oltp/src-generated/Product/OLTP/`.
 
+> **Subset surfaced via `merchant-config.yml.example`.** Most gates here are exposed in the per-merchant config file as boolean toggles. Four are intentionally omitted because they are not agent-configurable:
+> `mandateConfig` (JSON blob), `basiliskKeyId` / `encryptionKeyIds` (JWE key material), `enabled` (master kill-switch), `enableSuccessRateBasedGatewayElimination` (internal tuning). Cards that need to reason about those flags must do so via maintainer guidance, not through `merchant-config.yml`.
+
 | Flow / Feature                         | MerchantAccount field                                  | File:line                   | Failure mode                               |
 | -------------------------------------- | ------------------------------------------------------ | --------------------------- | ------------------------------------------ |
 | Pre-auth + capture (recapture)         | `enableRecapture`                                      | MerchantAccount.hs:106      | Loud — 400 from PreAuth.hs                 |
