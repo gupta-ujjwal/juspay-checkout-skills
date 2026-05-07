@@ -9,3 +9,9 @@ result-*
 .envrc
 node_modules/
 .tmp/
+/.do-results.json
+/apm_modules/
+
+
+# APM dependencies
+apm_modules/
