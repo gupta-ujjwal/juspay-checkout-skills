@@ -1,0 +1,47 @@
+# Per-skill verification provenance. Replaces the per-card `verified_against:`
+# frontmatter entries — when a card is re-verified against the Juspay Euler
+# source, update its entry here. `scripts/check.py` requires every skill ID
+# registered in `dependencies.yml` to appear here.
+#
+# Schema per entry:
+#   verified_at:  ISO-8601 date the card was last checked.
+#   source:       Identifier of what it was checked against. Today this is
+#                 always `euler-workspace-5` (the internal Juspay monorepo).
+#                 The repo is private; merchants resolve provenance via the
+#                 `references:` URLs in each card's frontmatter instead.
+
+auth_basic:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+auth_signature:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+environments:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+order_create:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+order_status:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+error_codes:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+merchant_gates:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+cards_3ds:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5
+
+refund:
+  verified_at: "2026-05-07"
+  source: euler-workspace-5

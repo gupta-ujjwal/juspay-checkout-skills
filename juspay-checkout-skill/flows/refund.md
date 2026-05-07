@@ -6,7 +6,6 @@ applies_to: [ec-api]
 metadata:
   author: Juspay
   version: "0.1.0"
-  verified_against: euler-workspace-5 (2026-05-07 snapshot)
 references:
   - https://juspay.io/sea/docs/ec-api-global/docs/order--payment-api-integration/refunds.md
 ---

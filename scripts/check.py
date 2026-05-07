@@ -32,6 +32,7 @@ REPO = Path(__file__).resolve().parent.parent
 SKILL_ROOT = REPO / "juspay-checkout-skill"
 DEPS_FILE = REPO / "dependencies.yml"
 MERCHANT_CONFIG = REPO / "merchant-config.yml.example"
+VERIFICATIONS_FILE = REPO / ".verifications.yml"
 
 # Frontmatter keys that, when written in block form (`key:` followed by `  - item`
 # lines), are lists rather than maps. Add a key here if a new block-list field
@@ -133,6 +134,26 @@ def parse_dependencies_yml(path: Path) -> set[str]:
     return ids
 
 
+def parse_verifications_yml(path: Path) -> set[str]:
+    """Collect the set of skill IDs registered in .verifications.yml. Looks for
+    top-level keys ending with `:` that are followed by an indented `verified_at:`
+    line — that distinguishes skill entries from inline comments and the file's
+    own scalar fields, if any are added later."""
+    ids: set[str] = set()
+    if not path.exists():
+        return ids
+    lines = path.read_text().splitlines()
+    for i, raw_line in enumerate(lines):
+        m = re.match(r"^([A-Za-z_][\w]*):\s*$", raw_line)
+        if not m:
+            continue
+        for follow in lines[i + 1 : i + 5]:
+            if re.match(r"\s+verified_at:", follow):
+                ids.add(m.group(1))
+                break
+    return ids
+
+
 def parse_merchant_config_keys(path: Path) -> set[str]:
     """Collect gate keys from merchant-config.yml.example."""
     keys: set[str] = set()
@@ -190,7 +211,7 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
 
     required = ["name", "description"]
     if is_card:
-        required += ["type", "metadata", "references"]
+        required += ["type", "references"]
     for key in required:
         if key not in front or front[key] in ("", None, [], {}):
             errors.append(f"{rel}: missing or empty frontmatter field `{key}`")
@@ -204,9 +225,6 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
             errors.append(
                 f"{rel}: frontmatter `type` must be `base` or `flow` (got {front.get('type')!r})"
             )
-        meta = front.get("metadata", {})
-        if not isinstance(meta, dict) or "verified_against" not in meta or not meta["verified_against"]:
-            errors.append(f"{rel}: missing `metadata.verified_against`")
         if not isinstance(front.get("references"), list) or not front["references"]:
             errors.append(f"{rel}: `references:` must be a non-empty list")
 
@@ -255,6 +273,7 @@ def main() -> int:
 
     valid_ids = parse_dependencies_yml(DEPS_FILE)
     gate_keys = parse_merchant_config_keys(MERCHANT_CONFIG)
+    verified_ids = parse_verifications_yml(VERIFICATIONS_FILE)
 
     errors: list[str] = []
     cards: list[Path] = []
@@ -274,6 +293,14 @@ def main() -> int:
         errors.append(
             f"card `{orphan}` exists but is not registered in dependencies.yml"
         )
+    for unverified in sorted(valid_ids - verified_ids):
+        errors.append(
+            f"skill `{unverified}` is in dependencies.yml but has no entry in .verifications.yml"
+        )
+    for stray in sorted(verified_ids - valid_ids):
+        errors.append(
+            f".verifications.yml lists `{stray}` but it is not in dependencies.yml"
+        )
 
     if errors:
         print(f"check.py: {len(errors)} error(s)")
@@ -281,7 +308,10 @@ def main() -> int:
             print(f"  - {e}")
         return 1
 
-    print(f"check.py: ok ({len(cards)} cards, {len(valid_ids)} registered ids, {len(gate_keys)} gate keys)")
+    print(
+        f"check.py: ok ({len(cards)} cards, {len(valid_ids)} registered ids, "
+        f"{len(verified_ids)} verified ids, {len(gate_keys)} gate keys)"
+    )
     return 0
 
 
