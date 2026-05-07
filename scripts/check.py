@@ -142,15 +142,24 @@ def parse_verifications_yml(path: Path) -> tuple[set[str], list[str]]:
     return ids, errors
 
 
-def parse_merchant_config_keys(path: Path) -> set[str]:
-    """Collect gate keys from merchant-config.yml.example's `gates:` block."""
+def parse_merchant_config_keys(path: Path) -> tuple[set[str], list[str]]:
+    """Collect gate keys from merchant-config.yml.example's `gates:` block.
+    Returns (keys, errors) — surfaces malformed shapes consistently with the
+    other registry parsers, so a missing or wrongly-typed `gates:` block is
+    reported at parse time rather than only via downstream symptoms."""
     data = _load_yaml(path)
+    if data is None:
+        return set(), []
     if not isinstance(data, dict):
-        return set()
+        return set(), [f"{path.name}: top level must be a mapping"]
     gates = data.get("gates")
+    if gates is None:
+        return set(), []
     if not isinstance(gates, dict):
-        return set()
-    return set(gates.keys())
+        return set(), [
+            f"{path.name}: `gates:` must be a mapping (got {type(gates).__name__})"
+        ]
+    return set(gates.keys()), []
 
 
 def extract_section(body: str, heading: str) -> str | None:
@@ -307,10 +316,10 @@ def main() -> int:
         return 1
 
     valid_ids, dep_errors = parse_dependencies_yml(DEPS_FILE)
-    gate_keys = parse_merchant_config_keys(MERCHANT_CONFIG)
+    gate_keys, gate_errors = parse_merchant_config_keys(MERCHANT_CONFIG)
     verified_ids, ver_errors = parse_verifications_yml(VERIFICATIONS_FILE)
 
-    errors: list[str] = list(dep_errors) + list(ver_errors)
+    errors: list[str] = [*dep_errors, *gate_errors, *ver_errors]
     cards: list[Path] = []
     for path in sorted(SKILL_ROOT.rglob("*.md")):
         cards.append(path)
