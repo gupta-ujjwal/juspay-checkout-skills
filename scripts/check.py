@@ -1,25 +1,39 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = ["PyYAML>=6.0"]
+# ///
 """Validator for the juspay-checkout-skills bank.
 
-Runs as the project's check command (`.agency/do.md`).
+Runs as the project's check + CI command (`.agency/do.md`):
+
+    uv run scripts/check.py     # auto-installs PyYAML the first time
+
+Or, if you have PyYAML system-installed: `python3 scripts/check.py`.
 
 Validates:
 
 1. Frontmatter — every `.md` skill card has a YAML frontmatter block with the
-   required fields: `name`, `description`, `metadata.verified_against`. Cards
-   under `_base/` and `flows/` additionally need `type` (base|flow) and a
-   non-empty `references:` list. The `name` field must match the filename
-   (without extension).
+   required fields: `name`, `description`. Cards under `_base/` and `flows/`
+   additionally need `type` (base|flow) and a non-empty `references:` list.
+   The `name` field must match the filename (without extension).
 
 2. Dependencies — for every skill card that has a `## Dependencies` section,
-   each listed item must resolve to an entry in `dependencies.yml`. Catches
-   typos and renames before they ship.
+   each listed item must resolve to an entry in `dependencies.yml`.
 
-3. Gates — for every flow card that has a `## Merchant Enablement` section
-   referencing a gate keyword (e.g. `refunds_in_dashboard_enabled`), that
-   keyword must exist in `merchant-config.yml.example` so consumers know it.
+3. Gate references — for every flow card that has a `## Merchant Enablement`
+   section referencing a snake_case keyword, validate that any keyword close
+   to a known gate matches one in `merchant-config.yml.example`. Catches typos
+   without false-flagging incidental tokens like `unique_request_id`.
 
-Exits 0 on success, 1 on any failure. Stdlib only — no external deps.
+4. Provenance — every skill ID registered in `dependencies.yml` must have an
+   entry in `.verifications.yml`, and vice versa.
+
+5. Mode/heading consistency — flow cards' `applies_to` frontmatter must agree
+   with the `### EC-API integration` / `### HyperCheckout integration` /
+   `### Express Checkout SDK integration` subsection headings.
+
+Exits 0 on success, 1 on any failure.
 """
 
 from __future__ import annotations
@@ -28,88 +42,13 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO = Path(__file__).resolve().parent.parent
 SKILL_ROOT = REPO / "juspay-checkout-skill"
 DEPS_FILE = REPO / "dependencies.yml"
 MERCHANT_CONFIG = REPO / "merchant-config.yml.example"
 VERIFICATIONS_FILE = REPO / ".verifications.yml"
-
-# Frontmatter keys that, when written in block form (`key:` followed by `  - item`
-# lines), are lists rather than maps. Add a key here if a new block-list field
-# is introduced — without it, the parser will misinterpret the empty-value line
-# as a map header and reject the indented `- item` lines.
-BLOCK_LIST_KEYS: frozenset[str] = frozenset({"references", "applies_to"})
-
-
-def parse_frontmatter(text: str) -> tuple[dict, str]:
-    """Hand-parse YAML frontmatter for the limited shape this repo uses.
-
-    Supports: top-level scalars, top-level lists (one item per line with `-`),
-    one level of nested mappings (e.g. `metadata:` block). Quoted and unquoted
-    string values both work. Returns (data, body) or raises ValueError.
-    """
-    if not text.startswith("---\n"):
-        raise ValueError("missing opening `---` delimiter")
-    end = text.find("\n---\n", 4)
-    if end == -1:
-        raise ValueError("missing closing `---` delimiter")
-    raw = text[4:end]
-    body = text[end + 5 :]
-
-    data: dict = {}
-    current_key: str | None = None
-    current_kind: str | None = None
-    for raw_line in raw.splitlines():
-        if not raw_line.strip() or raw_line.lstrip().startswith("#"):
-            continue
-        if raw_line.startswith("  "):
-            inner = raw_line[2:]
-            if current_key is None:
-                raise ValueError(f"indented line with no parent key: {raw_line!r}")
-            if current_kind == "list":
-                m = re.match(r"\s*-\s*(.*)$", inner)
-                if not m:
-                    raise ValueError(f"expected list item: {raw_line!r}")
-                data[current_key].append(_strip_quotes(m.group(1).strip()))
-            elif current_kind == "map":
-                m = re.match(r"([A-Za-z_][\w]*):\s*(.*)$", inner)
-                if not m:
-                    raise ValueError(f"expected key:value in map: {raw_line!r}")
-                k, v = m.group(1), m.group(2).strip()
-                data[current_key][k] = _strip_quotes(v)
-            else:
-                raise ValueError(f"unexpected indented content: {raw_line!r}")
-            continue
-
-        m = re.match(r"([A-Za-z_][\w]*):\s*(.*)$", raw_line)
-        if not m:
-            raise ValueError(f"unrecognised line: {raw_line!r}")
-        key, value = m.group(1), m.group(2).strip()
-        if value == "":
-            if key in BLOCK_LIST_KEYS:
-                data[key] = []
-                current_kind = "list"
-            else:
-                data[key] = {}
-                current_kind = "map"
-            current_key = key
-        elif value.startswith("["):
-            inner = value.strip("[]")
-            data[key] = [_strip_quotes(item.strip()) for item in inner.split(",") if item.strip()]
-            current_key = key
-            current_kind = "list-inline"
-        else:
-            data[key] = _strip_quotes(value)
-            current_key = key
-            current_kind = "scalar"
-    return data, body
-
-
-def _strip_quotes(s: str) -> str:
-    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("'", '"'):
-        return s[1:-1]
-    return s
-
 
 MODE_HEADINGS: dict[str, str] = {
     "ec-api": "EC-API integration",
@@ -118,14 +57,107 @@ MODE_HEADINGS: dict[str, str] = {
 }
 
 
-def _check_applies_to_consistency(rel: Path, front: dict, body: str) -> list[str]:
-    """For flow cards, every mode in `applies_to` must have a correspondingly-titled
-    `### <Mode>` integration subsection in the body, and every such subsection
-    that is *not* a Phase-N stub must have its mode listed in `applies_to`.
+def parse_frontmatter(text: str) -> tuple[dict, str]:
+    """Split a `---`-delimited YAML frontmatter block from its Markdown body
+    and return (parsed_data, body). Raises ValueError if the delimiters are
+    missing or the YAML is malformed.
+    """
+    if not text.startswith("---\n"):
+        raise ValueError("missing opening `---` delimiter")
+    end = text.find("\n---\n", 4)
+    if end == -1:
+        raise ValueError("missing closing `---` delimiter")
+    raw = text[4:end]
+    body = text[end + 5 :]
+    data = yaml.safe_load(raw) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"frontmatter is not a mapping (got {type(data).__name__})")
+    return data, body
 
-    A stub is a subsection whose first non-empty line is a `> **Phase N.**` blockquote
-    — those are forward-reference signposts and are allowed without the corresponding
-    `applies_to` entry.
+
+def _suggest_gate_keys(keyword: str, gate_keys: set[str]) -> list[str]:
+    """Return gate_keys that look like plausible "did you mean" candidates for
+    `keyword`. Used to distinguish gate-name typos (where the offender shares
+    structure with a real gate) from incidental snake_case tokens like
+    `unique_request_id` that are not gate references at all."""
+    import difflib
+
+    return difflib.get_close_matches(keyword, gate_keys, n=3, cutoff=0.75)
+
+
+def _load_yaml(path: Path) -> object:
+    """Return the parsed YAML from `path`, or `None` if the file is missing."""
+    if not path.exists():
+        return None
+    return yaml.safe_load(path.read_text())
+
+
+def parse_dependencies_yml(path: Path) -> set[str]:
+    """Collect every skill ID listed under any top-level key in dependencies.yml."""
+    data = _load_yaml(path)
+    if not isinstance(data, dict):
+        return set()
+    ids: set[str] = set()
+    for value in data.values():
+        if isinstance(value, list):
+            ids.update(str(item) for item in value if isinstance(item, str))
+    return ids
+
+
+def parse_verifications_yml(path: Path) -> set[str]:
+    """Collect skill IDs registered in .verifications.yml. Each entry is a
+    top-level mapping whose value contains `verified_at`."""
+    data = _load_yaml(path)
+    if not isinstance(data, dict):
+        return set()
+    return {
+        key
+        for key, value in data.items()
+        if isinstance(value, dict) and "verified_at" in value
+    }
+
+
+def parse_merchant_config_keys(path: Path) -> set[str]:
+    """Collect gate keys from merchant-config.yml.example's `gates:` block."""
+    data = _load_yaml(path)
+    if not isinstance(data, dict):
+        return set()
+    gates = data.get("gates")
+    if not isinstance(gates, dict):
+        return set()
+    return set(gates.keys())
+
+
+def extract_section(body: str, heading: str) -> str | None:
+    """Return the content of a `## <heading>` section up to the next `## ` or EOF."""
+    pattern = re.compile(rf"^##\s+{re.escape(heading)}\s*$", re.MULTILINE)
+    m = pattern.search(body)
+    if not m:
+        return None
+    start = m.end()
+    next_m = re.search(r"^##\s+", body[start:], re.MULTILINE)
+    end = start + next_m.start() if next_m else len(body)
+    return body[start:end]
+
+
+def extract_dependency_ids(deps_section: str) -> list[str]:
+    r"""Parse `- skill_id` lines from a Dependencies section's content. Strips
+    inline backticks so `- \`auth_basic\`` and `- auth_basic` both work."""
+    ids: list[str] = []
+    for raw_line in deps_section.splitlines():
+        m = re.match(r"\s*-\s*`?([A-Za-z_][\w]*)`?\s*$", raw_line)
+        if m:
+            ids.append(m.group(1))
+    return ids
+
+
+def _check_applies_to_consistency(rel: Path, front: dict, body: str) -> list[str]:
+    """For flow cards, every mode in `applies_to` must have a correspondingly-
+    titled `### <Mode>` integration subsection in the body, and every such
+    subsection that is *not* a Phase-N stub must have its mode listed in
+    `applies_to`. Stubs are subsections whose first non-empty line is a
+    `> **Phase N.**` blockquote — forward-reference signposts that don't yet
+    require `applies_to` coverage.
     """
     errors: list[str] = []
     applies_to = front.get("applies_to", [])
@@ -172,92 +204,6 @@ def _check_applies_to_consistency(rel: Path, front: dict, body: str) -> list[str
     return errors
 
 
-def _suggest_gate_keys(keyword: str, gate_keys: set[str]) -> list[str]:
-    """Return gate_keys that look like plausible "did you mean" candidates for
-    `keyword`. Used to distinguish gate-name typos (where the offender shares
-    structure with a real gate) from incidental snake_case tokens like
-    `application_json` that are not gate references at all."""
-    import difflib
-
-    return difflib.get_close_matches(keyword, gate_keys, n=3, cutoff=0.75)
-
-
-def parse_dependencies_yml(path: Path) -> set[str]:
-    """Collect skill IDs from dependencies.yml. Ignores comments and blank lines."""
-    ids: set[str] = set()
-    if not path.exists():
-        return ids
-    for raw_line in path.read_text().splitlines():
-        line = raw_line.split("#", 1)[0].rstrip()
-        m = re.match(r"\s*-\s*([A-Za-z_][\w]*)\s*$", line)
-        if m:
-            ids.add(m.group(1))
-    return ids
-
-
-def parse_verifications_yml(path: Path) -> set[str]:
-    """Collect the set of skill IDs registered in .verifications.yml. Looks for
-    top-level keys ending with `:` that are followed by an indented `verified_at:`
-    line — that distinguishes skill entries from inline comments and the file's
-    own scalar fields, if any are added later."""
-    ids: set[str] = set()
-    if not path.exists():
-        return ids
-    lines = path.read_text().splitlines()
-    for i, raw_line in enumerate(lines):
-        m = re.match(r"^([A-Za-z_][\w]*):\s*$", raw_line)
-        if not m:
-            continue
-        for follow in lines[i + 1 : i + 5]:
-            if re.match(r"\s+verified_at:", follow):
-                ids.add(m.group(1))
-                break
-    return ids
-
-
-def parse_merchant_config_keys(path: Path) -> set[str]:
-    """Collect gate keys from merchant-config.yml.example."""
-    keys: set[str] = set()
-    if not path.exists():
-        return keys
-    in_gates = False
-    for raw_line in path.read_text().splitlines():
-        if raw_line.startswith("gates:"):
-            in_gates = True
-            continue
-        if in_gates:
-            if raw_line and not raw_line.startswith((" ", "\t", "#")):
-                in_gates = False
-                continue
-            m = re.match(r"\s+([A-Za-z_][\w]*):\s*", raw_line)
-            if m:
-                keys.add(m.group(1))
-    return keys
-
-
-def extract_section(body: str, heading: str) -> str | None:
-    """Return the content of a `## <heading>` section up to the next `## ` or EOF."""
-    pattern = re.compile(rf"^##\s+{re.escape(heading)}\s*$", re.MULTILINE)
-    m = pattern.search(body)
-    if not m:
-        return None
-    start = m.end()
-    next_m = re.search(r"^##\s+", body[start:], re.MULTILINE)
-    end = start + next_m.start() if next_m else len(body)
-    return body[start:end]
-
-
-def extract_dependency_ids(deps_section: str) -> list[str]:
-    r"""Parse `- skill_id` lines from a Dependencies section's content. Strips
-    inline backticks so `- \`auth_basic\`` and `- auth_basic` both work."""
-    ids: list[str] = []
-    for raw_line in deps_section.splitlines():
-        m = re.match(r"\s*-\s*`?([A-Za-z_][\w]*)`?\s*$", raw_line)
-        if m:
-            ids.append(m.group(1))
-    return ids
-
-
 def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str]:
     errors: list[str] = []
     text = path.read_text()
@@ -265,7 +211,7 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
 
     try:
         front, body = parse_frontmatter(text)
-    except ValueError as e:
+    except (ValueError, yaml.YAMLError) as e:
         return [f"{rel}: frontmatter parse error: {e}"]
 
     is_card = path.parent.name in {"_base", "flows"}
@@ -350,13 +296,9 @@ def main() -> int:
 
     declared_ids = {p.stem for p in cards if p.parent.name in {"_base", "flows"}}
     for missing in sorted(valid_ids - declared_ids):
-        errors.append(
-            f"dependencies.yml lists `{missing}` but no card exists for it"
-        )
+        errors.append(f"dependencies.yml lists `{missing}` but no card exists for it")
     for orphan in sorted(declared_ids - valid_ids):
-        errors.append(
-            f"card `{orphan}` exists but is not registered in dependencies.yml"
-        )
+        errors.append(f"card `{orphan}` exists but is not registered in dependencies.yml")
     for unverified in sorted(valid_ids - verified_ids):
         errors.append(
             f"skill `{unverified}` is in dependencies.yml but has no entry in .verifications.yml"

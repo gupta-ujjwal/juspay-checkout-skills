@@ -1,7 +1,7 @@
 # /do config
 
 ## Check command
-python3 scripts/check.py
+uv run scripts/check.py
 
 ## Format command
 prettier --write '**/*.md'
@@ -10,7 +10,7 @@ prettier --write '**/*.md'
 echo 'no tests yet'
 
 ## CI command
-python3 scripts/check.py
+uv run scripts/check.py
 
 ## Documentation
 Keep `README.md` and `juspay-checkout-skill/SKILL.md` in sync with user-facing changes
