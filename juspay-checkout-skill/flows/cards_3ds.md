@@ -56,6 +56,10 @@ Confirm `merchant-config.yml` before generating tokenization code. See `merchant
 
 (Production hosts swap `sandbox` for `api`.)
 
+## Request
+
+The request payload differs per integration mode. For step 1 (order create) refer to `order_create`; for step 5 (status fetch) refer to `order_status`. The mode-specific subsections below cover step 2 (txn initiation), where the payload differs most.
+
 ### EC-API integration
 
 #### POST /txns — txn initiation
