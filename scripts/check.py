@@ -203,16 +203,23 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
                 )
 
     enablement = extract_section(body, "Merchant Enablement")
-    if enablement and gate_keys:
-        for keyword in re.findall(r"`([a-z_][a-z0-9_]+_enabled|[a-z_][a-z0-9_]*_2fa)`", enablement):
-            if keyword in gate_keys:
-                continue
-            close = [k for k in gate_keys if keyword in k or k in keyword]
+    if enablement:
+        if not gate_keys:
             errors.append(
-                f"{rel}: Merchant Enablement references gate `{keyword}` not in "
-                f"merchant-config.yml.example"
-                + (f" (similar: {', '.join(close)})" if close else "")
+                f"{rel}: Merchant Enablement section present but "
+                f"merchant-config.yml.example is missing or has no gates: block — "
+                f"gate references cannot be validated"
             )
+        else:
+            for keyword in re.findall(r"`([a-z_][a-z0-9_]+_enabled|[a-z_][a-z0-9_]*_2fa)`", enablement):
+                if keyword in gate_keys:
+                    continue
+                close = [k for k in gate_keys if keyword in k or k in keyword]
+                errors.append(
+                    f"{rel}: Merchant Enablement references gate `{keyword}` not in "
+                    f"merchant-config.yml.example"
+                    + (f" (similar: {', '.join(close)})" if close else "")
+                )
 
     return errors
 
