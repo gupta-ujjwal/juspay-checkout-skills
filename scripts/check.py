@@ -33,6 +33,12 @@ SKILL_ROOT = REPO / "juspay-checkout-skill"
 DEPS_FILE = REPO / "dependencies.yml"
 MERCHANT_CONFIG = REPO / "merchant-config.yml.example"
 
+# Frontmatter keys that, when written in block form (`key:` followed by `  - item`
+# lines), are lists rather than maps. Add a key here if a new block-list field
+# is introduced — without it, the parser will misinterpret the empty-value line
+# as a map header and reject the indented `- item` lines.
+BLOCK_LIST_KEYS: frozenset[str] = frozenset({"references", "applies_to"})
+
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     """Hand-parse YAML frontmatter for the limited shape this repo uses.
@@ -79,9 +85,13 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             raise ValueError(f"unrecognised line: {raw_line!r}")
         key, value = m.group(1), m.group(2).strip()
         if value == "":
-            data[key] = {}
+            if key in BLOCK_LIST_KEYS:
+                data[key] = []
+                current_kind = "list"
+            else:
+                data[key] = {}
+                current_kind = "map"
             current_key = key
-            current_kind = "map"
         elif value.startswith("["):
             inner = value.strip("[]")
             data[key] = [_strip_quotes(item.strip()) for item in inner.split(",") if item.strip()]
@@ -91,9 +101,6 @@ def parse_frontmatter(text: str) -> tuple[dict, str]:
             data[key] = _strip_quotes(value)
             current_key = key
             current_kind = "scalar"
-        if value == "" and key in {"references"}:
-            data[key] = []
-            current_kind = "list"
     return data, body
 
 
