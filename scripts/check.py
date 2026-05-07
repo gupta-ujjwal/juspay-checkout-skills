@@ -111,6 +111,67 @@ def _strip_quotes(s: str) -> str:
     return s
 
 
+MODE_HEADINGS: dict[str, str] = {
+    "ec-api": "EC-API integration",
+    "hyper-checkout": "HyperCheckout integration",
+    "express-checkout-sdk": "Express Checkout SDK integration",
+}
+
+
+def _check_applies_to_consistency(rel: Path, front: dict, body: str) -> list[str]:
+    """For flow cards, every mode in `applies_to` must have a correspondingly-titled
+    `### <Mode>` integration subsection in the body, and every such subsection
+    that is *not* a Phase-N stub must have its mode listed in `applies_to`.
+
+    A stub is a subsection whose first non-empty line is a `> **Phase N.**` blockquote
+    — those are forward-reference signposts and are allowed without the corresponding
+    `applies_to` entry.
+    """
+    errors: list[str] = []
+    applies_to = front.get("applies_to", [])
+    if not isinstance(applies_to, list):
+        return [f"{rel}: `applies_to` must be a list"]
+
+    multi_mode = len(applies_to) > 1
+    for mode in applies_to:
+        if mode not in MODE_HEADINGS:
+            errors.append(
+                f"{rel}: `applies_to` lists unknown mode `{mode}` "
+                f"(expected one of: {', '.join(MODE_HEADINGS)})"
+            )
+            continue
+        if not multi_mode:
+            continue  # single-mode flow has no per-mode subsection — whole card is the mode
+        heading = MODE_HEADINGS[mode]
+        if not re.search(rf"^###\s+{re.escape(heading)}\s*$", body, re.MULTILINE):
+            errors.append(
+                f"{rel}: `applies_to` lists `{mode}` but no `### {heading}` heading found in body"
+            )
+
+    for mode, heading in MODE_HEADINGS.items():
+        section_re = re.compile(
+            rf"^###\s+{re.escape(heading)}\s*$\n(.*?)(?=^##?\s+|\Z)",
+            re.MULTILINE | re.DOTALL,
+        )
+        m = section_re.search(body)
+        if not m:
+            continue
+        section_body = m.group(1).strip()
+        first_nonempty = next(
+            (line for line in section_body.splitlines() if line.strip()), ""
+        )
+        is_stub = bool(re.match(r"^>\s*\*\*Phase\s+\d+", first_nonempty))
+        if is_stub:
+            continue
+        if mode not in applies_to:
+            errors.append(
+                f"{rel}: body has `### {heading}` with substantive content but "
+                f"`applies_to` does not list `{mode}`"
+            )
+
+    return errors
+
+
 def _suggest_gate_keys(keyword: str, gate_keys: set[str]) -> list[str]:
     """Return gate_keys that look like plausible "did you mean" candidates for
     `keyword`. Used to distinguish gate-name typos (where the offender shares
@@ -227,6 +288,9 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
             )
         if not isinstance(front.get("references"), list) or not front["references"]:
             errors.append(f"{rel}: `references:` must be a non-empty list")
+
+    if is_card and front.get("type") == "flow":
+        errors.extend(_check_applies_to_consistency(rel, front, body))
 
     deps_section = extract_section(body, "Dependencies")
     if deps_section:
