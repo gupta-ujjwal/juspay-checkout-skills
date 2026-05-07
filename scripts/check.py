@@ -110,6 +110,16 @@ def _strip_quotes(s: str) -> str:
     return s
 
 
+def _suggest_gate_keys(keyword: str, gate_keys: set[str]) -> list[str]:
+    """Return gate_keys that look like plausible "did you mean" candidates for
+    `keyword`. Used to distinguish gate-name typos (where the offender shares
+    structure with a real gate) from incidental snake_case tokens like
+    `application_json` that are not gate references at all."""
+    import difflib
+
+    return difflib.get_close_matches(keyword, gate_keys, n=3, cutoff=0.75)
+
+
 def parse_dependencies_yml(path: Path) -> set[str]:
     """Collect skill IDs from dependencies.yml. Ignores comments and blank lines."""
     ids: set[str] = set()
@@ -218,14 +228,21 @@ def check_card(path: Path, valid_ids: set[str], gate_keys: set[str]) -> list[str
                 f"gate references cannot be validated"
             )
         else:
-            for keyword in re.findall(r"`([a-z_][a-z0-9_]+_enabled|[a-z_][a-z0-9_]*_2fa)`", enablement):
+            referenced = {
+                kw
+                for kw in re.findall(r"`([a-z][a-z0-9_]*)`", enablement)
+                if "_" in kw  # exclude single-word backticks like `true`/`false`
+            }
+            for keyword in referenced:
                 if keyword in gate_keys:
                     continue
-                close = [k for k in gate_keys if keyword in k or k in keyword]
+                close = _suggest_gate_keys(keyword, gate_keys)
+                if not close:
+                    continue  # unrelated snake_case token, not a gate reference
                 errors.append(
                     f"{rel}: Merchant Enablement references gate `{keyword}` not in "
-                    f"merchant-config.yml.example"
-                    + (f" (similar: {', '.join(close)})" if close else "")
+                    f"merchant-config.yml.example "
+                    f"(similar: {', '.join(close)})"
                 )
 
     return errors
