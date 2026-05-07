@@ -2,7 +2,7 @@
 name: cards_3ds
 description: Card payment with 3D Secure authentication — most common card flow, supports challenge and frictionless paths
 type: flow
-applies_to: [ec-api, hyper-checkout, express-checkout-sdk]
+applies_to: [ec-api]
 metadata:
   author: Juspay
   version: "0.1.0"
@@ -16,6 +16,8 @@ references:
 - Implementing a card payment that supports 3D Secure (3DS / VBV / EMV 3DS) authentication.
 - The default for Indian cards (RBI mandates 3DS) and most international cards under SCA.
 - Supports both **challenge** path (customer redirected to issuer ACS) and **frictionless** path (no challenge, direct authorization).
+
+> **EC-API path only (Phase 1).** HyperCheckout and EC-SDK adapters land in Phase 3 — the subsections below for those modes are forward-reference stubs, not yet usable. `applies_to` will widen as those subsections are populated.
 
 ## Merchant Enablement
 
