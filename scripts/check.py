@@ -38,6 +38,7 @@ Exits 0 on success, 1 on any failure.
 
 from __future__ import annotations
 
+import difflib
 import re
 import sys
 from pathlib import Path
@@ -80,8 +81,6 @@ def _suggest_gate_keys(keyword: str, gate_keys: set[str]) -> list[str]:
     `keyword`. Used to distinguish gate-name typos (where the offender shares
     structure with a real gate) from incidental snake_case tokens like
     `unique_request_id` that are not gate references at all."""
-    import difflib
-
     return difflib.get_close_matches(keyword, gate_keys, n=3, cutoff=0.75)
 
 
