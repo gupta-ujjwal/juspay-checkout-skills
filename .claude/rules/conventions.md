@@ -180,22 +180,45 @@ From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after 
 
 ## Variant slicing
 
+The slicing is **flow-primary**: one card per business flow, with conditional integration subsections inside the card for the modes that flow supports. Platform variance (HyperCheckout SDK init, EC-SDK init, etc.) lives in per-mode `integrations/` cards (Phase 3) — *not* replicated per flow.
+
 ```
 juspay-checkout-skill/
-├── SKILL.md                              # entry, lists all skills
-├── _base/                                # shared, referenced by ID
+├── SKILL.md                       # index merchants land on
+├── _base/                         # shared, referenced by ID via `## Dependencies`
 │   ├── auth_basic.md
 │   ├── auth_signature.md
-│   ├── auth_jwe.md
+│   ├── auth_jwe.md                # Phase 3
 │   ├── environments.md
 │   ├── order_create.md
 │   ├── order_status.md
+│   ├── webhooks.md                # Phase 2
+│   ├── error_codes.md
+│   └── merchant_gates.md
+├── flows/                         # one card per business flow; carries conditional
+│                                  # ### EC-API / ### HyperCheckout / ### EC-SDK
+│                                  # subsections for the modes the flow supports
+│   ├── cards_3ds.md
 │   ├── refund.md
-│   ├── webhooks.md
-│   └── error_codes.md
-├── hyper-checkout/{android,ios,web,react-native}/
-├── express-checkout-sdk/{android,ios,react-native,flutter,cordova,capacitor}/
-└── express-checkout-api/{cards_3ds,cards_3ds_frictionless,cards_no_3ds,cards_preauth_capture,bank_transfers,wallets,rtp,mandates_registration,mandates_execution,customer_crud,payment_methods}.md
+│   └── …                          # Phase 2 adds the other ~12 EC-API flows
+└── integrations/                  # Phase 3: one card per mode, with platform subsections
+    ├── hyper-checkout.md          #   (Android / iOS / Web / React Native)
+    ├── express-checkout-sdk.md    #   (Android / iOS / RN / Flutter / Cordova / Capacitor)
+    └── express-checkout-api.md    #   REST conventions
+```
+
+Repo-root infrastructure that supports the bank:
+
+```
+dependencies.yml             # Registry of valid skill IDs. Every `## Dependencies`
+                             # entry in any card must resolve here. scripts/check.py
+                             # validates this; renames are caught immediately.
+merchant-config.yml.example  # Per-merchant config template. Merchants copy to
+                             # merchant-config.yml (gitignored) and fill in. Skills
+                             # consult the file (via _base/merchant_gates.md) to
+                             # avoid asking per-card whether each gate is enabled.
+scripts/check.py             # Validator for frontmatter, dependency IDs, and gate
+                             # keyword references. Stdlib-only Python.
 ```
 
 ## Multi-agent install matrix
@@ -213,11 +236,11 @@ juspay-checkout-skill/
 
 ## Phasing
 
-1. **Phase 1** — `_base/` skills + EC-API flow skills (~12 cards). Validates schema; highest doc-vs-code value.
-2. **Phase 2** — HyperCheckout × 4 platforms.
-3. **Phase 3** — EC-SDK × 6 platforms.
-4. **Phase 4** — `setup.sh` multi-agent installer + format transforms.
-5. **Phase 5** — cross-skill consistency review before public release.
+1. **Phase 1 — delivered.** Smallest end-to-end useful slice: 7 base cards + 2 flow cards (`cards_3ds`, `refund`) so a merchant can "create order → 3DS pay → status → refund." Plus structural rails: `dependencies.yml`, `merchant-config.yml.example`, `scripts/check.py`.
+2. **Phase 2** — Rest of EC-API flows (`cards_no_3ds`, `cards_3ds_frictionless`, `cards_preauth_capture`, `bank_transfers`, `wallets`, `rtp`, `mandates_registration`, `mandates_execution`, `customer_crud`, `payment_methods`, `void_capture`) plus `_base/webhooks.md`.
+3. **Phase 3** — `integrations/{hyper-checkout,express-checkout-sdk,express-checkout-api}.md` with platform subsections inside; `_base/auth_jwe.md`. This is where the per-platform SDK init / lifecycle code lives.
+4. **Phase 4** — `setup.sh` multi-agent installer + format transforms (Cursor `.mdc`, Cline, Codex, OpenCode).
+5. **Phase 5** — Schema split (per-card `.verification.md` companion files) + license + cross-skill consistency review + public release.
 
 ## Open items
 

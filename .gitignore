@@ -12,6 +12,13 @@ node_modules/
 /.do-results.json
 /apm_modules/
 
+# Per-merchant config (the .example file is the template; the real one stays local)
+/merchant-config.yml
+
+# Python bytecode from scripts/
+__pycache__/
+*.pyc
+
 
 # APM dependencies
 apm_modules/

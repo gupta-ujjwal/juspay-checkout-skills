@@ -1,19 +1,21 @@
 # /do config
 
 ## Check command
-markdownlint **/*.md
+python3 scripts/check.py
 
 ## Format command
-prettier --write **/*.md
+prettier --write '**/*.md'
 
 ## Test command
 echo 'no tests yet'
 
 ## CI command
-echo 'no CI yet'
+python3 scripts/check.py
 
 ## Documentation
-Keep `README.md` in sync with user-facing changes.
+Keep `README.md` and `juspay-checkout-skill/SKILL.md` in sync with user-facing changes
+(new skill cards, slicing changes, schema changes). `CLAUDE.md` is for repo maintainers
+and should be updated when the build/verify workflow changes — not on each card add.
 
 <!-- Optional (add manually for the evidence step):
 ## PR evidence
