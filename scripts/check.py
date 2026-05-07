@@ -329,18 +329,14 @@ def main() -> int:
         errors.append(f"no skill cards found under {SKILL_ROOT.relative_to(REPO)}")
 
     declared_ids = {p.stem for p in cards if p.parent.name in {"_base", "flows"}}
-    for missing in sorted(valid_ids - declared_ids):
-        errors.append(f"dependencies.yml lists `{missing}` but no card exists for it")
-    for orphan in sorted(declared_ids - valid_ids):
-        errors.append(f"card `{orphan}` exists but is not registered in dependencies.yml")
-    for unverified in sorted(valid_ids - verified_ids):
-        errors.append(
-            f"skill `{unverified}` is in dependencies.yml but has no entry in .verifications.yml"
-        )
-    for stray in sorted(verified_ids - valid_ids):
-        errors.append(
-            f".verifications.yml lists `{stray}` but it is not in dependencies.yml"
-        )
+    cross_checks: list[tuple[set[str], str]] = [
+        (valid_ids - declared_ids, "dependencies.yml lists `{}` but no card exists for it"),
+        (declared_ids - valid_ids, "card `{}` exists but is not registered in dependencies.yml"),
+        (valid_ids - verified_ids, "skill `{}` is in dependencies.yml but has no entry in .verifications.yml"),
+        (verified_ids - valid_ids, ".verifications.yml lists `{}` but it is not in dependencies.yml"),
+    ]
+    for missing_set, template in cross_checks:
+        errors.extend(template.format(name) for name in sorted(missing_set))
 
     if errors:
         print(f"check.py: {len(errors)} error(s)")
