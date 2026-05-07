@@ -4,6 +4,38 @@ This file guides any AI agent (and the maintainer) working *on* the skill bank. 
 
 ---
 
+## Session resume — start here
+
+**Where we are** (as of commit `b3683da`):
+- Repo initialised on `main`, pushed to `github.com/gupta-ujjwal/juspay-checkout-skills`.
+- README, this CLAUDE.md, and `.gitignore` committed in `24bb37b`.
+- [`srid/agency`](https://github.com/srid/agency) installed via APM in `b3683da` — see *Agency tooling* section below.
+- **No skill cards written yet.** `juspay-checkout-skill/` directory does not exist yet.
+
+**What was decided** (don't re-litigate without reason):
+- Source of truth is `~/juspay/euler-workspace-5/`, not the public docs (see *Source of truth* below).
+- Three integration modes: HyperCheckout (4 platforms), Express Checkout SDK (6 platforms), Express Checkout API (REST flows).
+- Slicing: `_base/` shared skills + per-mode subtrees. See *Variant slicing*.
+- Skill bank coexists with [`juspay-mcp`](https://github.com/juspay/juspay-mcp) — static-context vs dynamic-fetch.
+- Scope is **global**, not SEA-specific (source docs are at `/sea/` but the bank is region-agnostic).
+
+**What's next** — Phase 1: write `_base/` skills + EC-API flow cards.
+1. `_base/auth_basic.md` — Basic auth + `x-merchantid` header.
+2. `_base/environments.md` — sandbox vs prod hosts.
+3. `_base/order_create.md` — `POST /orders`, the ~80 fields.
+4. `_base/order_status.md` — `GET /order/status` (the authoritative source).
+5. `_base/refund.md`, `_base/webhooks.md`, `_base/error_codes.md`, `_base/auth_signature.md`, `_base/auth_jwe.md`.
+6. EC-API flow cards: cards-3DS, cards-3DS-frictionless, cards-no-3DS, cards-preauth-capture, capture, void, bank-transfers, wallets, RTP, customer-CRUD, payment-methods, mandates-registration, mandates-execution.
+
+Verify every endpoint, field, and error against `euler-workspace-5/`. Use the `.md` doc-fetch recipe below as a starting point, then ground in code.
+
+**Open decisions** (deferred, ask before acting):
+- License file (Apache 2.0 placeholder in README — needs the actual `LICENSE` file).
+- Distribution model (`curl | bash` vs `npm` vs `brew tap`).
+- Per-region differences if they exist (currently using SEA docs as primary source).
+
+---
+
 ## Source of truth
 
 **Code beats docs, every time.** When the public docs at `juspay.io/sea/docs/` and the source at `~/juspay/euler-workspace-5/` disagree, code wins. The docs contradict themselves on Content-Type, omit auth schemes, and lag the implementation. Every claim in a skill card — endpoint path, field name, validation rule, error code, enablement gate — must be traceable to a file:line in `euler-workspace-5/`.
@@ -226,3 +258,19 @@ juspay-checkout-skill/
 - License file (Apache 2.0 implied — need to add).
 - Distribution model (`curl | bash` vs `npm` vs `brew tap`) — deferred.
 - Per-region differences (SEA vs IN vs Global) — currently using SEA docs as source; if features differ across regions, surface in skill metadata.
+
+---
+
+## Agency tooling
+
+This repo uses [`srid/agency`](https://github.com/srid/agency) installed via [APM](https://github.com/srid/apm). The framework's files live alongside the skill bank — they're for *building* the bank, not part of what merchants consume.
+
+- `apm.yml` — declares `srid/agency#master` as a dependency. Run `apm install` to refresh.
+- `apm_modules/srid/agency/` — installed framework (gitignored).
+- `.agency/do.md` — config for the `/do` slash command (check/format/test/CI commands). Currently `markdownlint **/*.md` for check, `prettier --write **/*.md` for format. Update when we have real CI.
+- `.claude/skills/` — agency skills available in this repo: `code-police`, `do`, `elegance`, `fact-check`, `forge-pr`, `hickey`, `lowy`, `ralph`, `talk`.
+- `.claude/agents/` — `hickey.md`, `lowy.md` subagents.
+- `.claude/rules/` — `apm-sources.md`, `conventions.md` — read these at the start of any session.
+- `.claude/settings.json` — `Stop` hook runs `.claude/hooks/agency/scripts/do-stop-guard.sh` (the `/do` enforcement).
+
+When iterating on the skill bank, prefer the agency skills where they fit — `/do` for check/format/CI, `forge-pr` for PRs, `fact-check` for verification claims.
