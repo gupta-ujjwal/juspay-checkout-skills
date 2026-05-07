@@ -1,0 +1,19 @@
+# Registry of valid skill IDs. Every `Dependencies` reference in a skill card
+# must resolve to an entry below. `scripts/check.py` validates this.
+#
+# When you add or rename a skill card, update this file in the same commit.
+# Renames here will (intentionally) break consumers — that's the point: the
+# check script will tell you which cards still reference the old name.
+
+base:
+  - auth_basic
+  - auth_signature
+  - environments
+  - order_create
+  - order_status
+  - error_codes
+  - merchant_gates
+
+flows:
+  - cards_3ds
+  - refund

@@ -1,0 +1,71 @@
+# merchant-config.yml — Per-merchant configuration consumed by Juspay Checkout Skills.
+#
+# Copy this file to `merchant-config.yml` (which is gitignored) and fill in the values
+# for your merchant account. AI agents read it to skip per-card enablement prompts.
+#
+# Each gate has one of three values:
+#   true      — gate is enabled in your Juspay merchant dashboard
+#   false     — gate is disabled
+#   unknown   — value not yet confirmed; the agent will ask before generating gated code
+#
+# See `juspay-checkout-skill/_base/merchant_gates.md` for the full gating model and
+# the mapping from these keys to the underlying Juspay merchant-account flags.
+
+merchant:
+  id: ""                  # value of the `x-merchantid` header (your merchant ID, not display name)
+  environment: sandbox    # sandbox | production
+
+auth:
+  scheme: basic                         # basic | signature | jwe (most integrations use basic)
+  api_key_env: JUSPAY_API_KEY           # name of env var holding your API key — never put the key here
+
+webhooks:
+  url: ""                               # webHookurl (Juspay calls this on payment events)
+  hmac_signing_enabled: unknown         # enablePaymentResponseHash + paymentResponseHashKey
+
+gates:
+  # Some Juspay merchant-account flags listed in CLAUDE.md's verified-gates table
+  # are intentionally omitted from this file because they are not agent-configurable:
+  #   - `mandateConfig`                            (JSON blob, not a boolean)
+  #   - `basiliskKeyId`, `encryptionKeyIds`        (JWE key material, not a toggle)
+  #   - `enabled`                                  (master kill-switch, not merchant-toggleable)
+  #   - `enableSuccessRateBasedGatewayElimination` (internal tuning, set by Juspay)
+  # If you need to interact with any of these, contact Juspay support — they are
+  # configured at the account level rather than via this file.
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Loud failures — request rejected (HTTP 4xx) if the gate is disabled
+  # ──────────────────────────────────────────────────────────────────────────
+
+  recapture_enabled: unknown                  # MerchantAccount.enableRecapture (pre-auth + capture)
+  reauthentication_enabled: unknown           # MerchantAccount.enableReauthentication
+  reauthorization_enabled: unknown            # MerchantAccount.enableReauthorization
+  express_checkout_enabled: unknown           # MerchantAccount.expressCheckoutEnabled (EC SDK)
+  inline_checkout_enabled: unknown            # MerchantAccount.inlineCheckoutEnabled
+  whitelabel_enabled: unknown                 # MerchantAccount.whitelabelEnabled (HyperCheckout)
+  refunds_in_dashboard_enabled: unknown       # MerchantAccount.enableRefundsInDashboard
+  instant_refund_enabled: unknown             # MerchantAccount.enabledInstantRefund (instant refund variant)
+  mandatory_2fa: unknown                      # MerchantAccount.mandatory2FA (rejects no-3DS)
+  unauthenticated_order_status_enabled: unknown   # MerchantAccount.enableUnauthenticatedOrderStatusApi
+  unauthenticated_card_add_enabled: unknown       # MerchantAccount.enableUnauthenticatedCardAdd
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Silent failures — feature is silently dropped if the gate is disabled.
+  # These are the dangerous case for AI agents: the API returns 200, the
+  # integration appears to work, but the gated capability quietly disappears.
+  # ──────────────────────────────────────────────────────────────────────────
+
+  save_card_before_auth_enabled: unknown                # MerchantAccount.enableSaveCardBeforeAuth
+  payment_response_hash_enabled: unknown                # MerchantAccount.enablePaymentResponseHash + paymentResponseHashKey (webhook signing)
+  auto_refund_conflict_transactions: unknown            # MerchantAccount.autoRefundConflictTransactions
+  auto_refund_multiple_charged_transactions: unknown    # MerchantAccount.autoRefundMultipleChargedTransactions
+  mandate_auto_retry_enabled: unknown                   # MerchantAccount.executeMandateAutoRetryEnabled
+  mandate_auto_revoke_enabled: unknown                  # MerchantAccount.mandateAutoRevokeEnabled
+  installment_enabled: unknown                          # MerchantAccount.installmentEnabled (EMI)
+  offers_enabled: unknown                               # MerchantAccount.offerEnabled
+  otp_enabled: unknown                                  # MerchantAccount.otpEnabled
+  external_risk_check_enabled: unknown                  # MerchantAccount.enableExternalRiskCheck
+  automatic_retry_enabled: unknown                      # MerchantAccount.enableAutomaticRetry
+  gateway_health_routing_enabled: unknown               # MerchantAccount.gatewayDecidedByHealthEnabled
+  redirect_to_merchant_with_http_post: unknown          # MerchantAccount.redirectToMerchantWithHttpPost
+  order_notification_enabled: unknown                   # MerchantAccount.enableOrderNotification + webHookurl
