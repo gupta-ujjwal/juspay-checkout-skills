@@ -92,29 +92,55 @@ def _load_yaml(path: Path) -> object:
     return yaml.safe_load(path.read_text())
 
 
-def parse_dependencies_yml(path: Path) -> set[str]:
-    """Collect every skill ID listed under any top-level key in dependencies.yml."""
+def parse_dependencies_yml(path: Path) -> tuple[set[str], list[str]]:
+    """Collect every skill ID listed under any top-level key in dependencies.yml.
+    Returns (ids, errors) — non-list top-level values are reported, not silently
+    dropped, so a malformed registry surfaces as a clear error rather than as a
+    misleading downstream 'orphan card' message."""
     data = _load_yaml(path)
+    if data is None:
+        return set(), []
     if not isinstance(data, dict):
-        return set()
+        return set(), [f"{path.name}: top level must be a mapping"]
     ids: set[str] = set()
-    for value in data.values():
-        if isinstance(value, list):
-            ids.update(str(item) for item in value if isinstance(item, str))
-    return ids
+    errors: list[str] = []
+    for key, value in data.items():
+        if not isinstance(value, list):
+            errors.append(
+                f"{path.name}: top-level key `{key}` must be a list of skill IDs "
+                f"(got {type(value).__name__})"
+            )
+            continue
+        ids.update(str(item) for item in value if isinstance(item, str))
+    return ids, errors
 
 
-def parse_verifications_yml(path: Path) -> set[str]:
-    """Collect skill IDs registered in .verifications.yml. Each entry is a
-    top-level mapping whose value contains `verified_at`."""
+def parse_verifications_yml(path: Path) -> tuple[set[str], list[str]]:
+    """Collect skill IDs registered in .verifications.yml. Each entry must be a
+    mapping containing `verified_at`. Returns (ids, errors) — entries that are
+    present but malformed (missing `verified_at`, wrong shape) surface as
+    explicit errors rather than being silently excluded."""
     data = _load_yaml(path)
+    if data is None:
+        return set(), []
     if not isinstance(data, dict):
-        return set()
-    return {
-        key
-        for key, value in data.items()
-        if isinstance(value, dict) and "verified_at" in value
-    }
+        return set(), [f"{path.name}: top level must be a mapping"]
+    ids: set[str] = set()
+    errors: list[str] = []
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            errors.append(
+                f"{path.name}: entry `{key}` must be a mapping with `verified_at` "
+                f"(got {type(value).__name__})"
+            )
+            continue
+        if "verified_at" not in value:
+            errors.append(
+                f"{path.name}: entry `{key}` is missing required `verified_at` field"
+            )
+            continue
+        ids.add(key)
+    return ids, errors
 
 
 def parse_merchant_config_keys(path: Path) -> set[str]:
@@ -281,11 +307,11 @@ def main() -> int:
         print(f"error: skill root {SKILL_ROOT} does not exist", file=sys.stderr)
         return 1
 
-    valid_ids = parse_dependencies_yml(DEPS_FILE)
+    valid_ids, dep_errors = parse_dependencies_yml(DEPS_FILE)
     gate_keys = parse_merchant_config_keys(MERCHANT_CONFIG)
-    verified_ids = parse_verifications_yml(VERIFICATIONS_FILE)
+    verified_ids, ver_errors = parse_verifications_yml(VERIFICATIONS_FILE)
 
-    errors: list[str] = []
+    errors: list[str] = list(dep_errors) + list(ver_errors)
     cards: list[Path] = []
     for path in sorted(SKILL_ROOT.rglob("*.md")):
         cards.append(path)
