@@ -16,7 +16,7 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 
 **What was decided** (don't re-litigate without reason):
 
-- Source of truth is `~/juspay/euler-workspace-5/`, not the public docs (see _Source of truth_ below). Skill cards carry `verified_against:` frontmatter pointing at the snapshot used to author them, plus a `references:` list of public-doc URLs that merchants can resolve (since they don't have euler-workspace-5).
+- Source of truth is `~/juspay/euler-workspace-5/`, not the public docs (see _Source of truth_ below). Per-card provenance lives in `.verifications.yml` at the repo root (one entry per skill ID with `verified_at` + `source`). Cards themselves carry only a `references:` list of public-doc URLs that merchants can resolve (since they don't have euler-workspace-5).
 - Three integration modes: HyperCheckout, Express Checkout SDK, Express Checkout API. **Slicing is flow-primary** — one card per business flow, with conditional `### EC-API` / `### HyperCheckout` / `### EC-SDK` subsections inside the card for modes the flow supports. Platform variance lives in per-mode `integrations/` cards (Phase 3), not replicated per flow. See _Variant slicing_.
 - Merchant-gate enforcement is structural: `merchant-config.yml` (fill-once) is consumed by the skill cards via `_base/merchant_gates.md`. Gated flows must list their gates in their _Merchant Enablement_ section; `scripts/check.py` validates the gate keywords appear in `merchant-config.yml.example`.
 - Skill bank coexists with [`juspay-mcp`](https://github.com/juspay/juspay-mcp) — static-context vs dynamic-fetch.
@@ -68,14 +68,15 @@ Each skill card lives in its own `.md` file with this frontmatter and section st
 
 ```markdown
 ---
-name: skill-id-lowercase-hyphenated
+name: skill_id_lowercase_underscored
 description: One sentence — used by agents for relevance matching, so be specific
 type: base | flow
-applies_to: [hyper-checkout/android, ec-api, ...] # for non-base skills
+applies_to: [ec-api, hyper-checkout, express-checkout-sdk] # flow cards only; subset of supported modes
 metadata:
   author: Juspay
   version: "0.1.0"
-  verified_against: euler-workspace-5@<short-sha>
+references:
+  - https://juspay.io/sea/docs/...
 ---
 
 ## When to Apply

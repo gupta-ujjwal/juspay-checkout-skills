@@ -35,11 +35,12 @@ Each skill card lives in its own `.md` file with this frontmatter and section st
 name: skill-id-lowercase-hyphenated
 description: One sentence — used by agents for relevance matching, so be specific
 type: base | flow
-applies_to: [hyper-checkout/android, ec-api, ...]   # for non-base skills
+applies_to: [ec-api, hyper-checkout, express-checkout-sdk]   # flow cards only; subset of supported modes
 metadata:
   author: Juspay
   version: "0.1.0"
-  verified_against: euler-workspace-5@<short-sha>
+references:
+  - https://juspay.io/sea/docs/...
 ---
 
 ## When to Apply
