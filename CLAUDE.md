@@ -19,13 +19,7 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 - [`docs/framework.md`](./docs/framework.md) — the structural framework: five layers, `SKILL.md` anatomy, naming, splitting heuristics, authoring quality bar, phasing.
 - [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) — maintenance rules: source-of-truth discipline, doc-fetching, Phase 1 scope, reference data (gates table + endpoint inventory), multi-agent install matrix.
 
-**What's next** — Phase 1, the spine (per `docs/framework.md` §7):
-
-1. `skills/SKILL.md` — bank-level entry point that orients the agent (start with the integration type, follow links to api-references, always read foundations first, check go-live before production).
-2. `skills/foundations/authentication/` — KeyAuth (`Authorization: Basic base64(api_key:)` + `x-merchantid`) plus the other schemes (TokenAuth, SignatureAuth, JWEAuth) noted in conventions.
-3. `skills/foundations/webhooks-and-signatures/` — HMAC verification (gated on `enablePaymentResponseHash` + `paymentResponseHashKey`).
-4. `skills/integrations/{hyper-checkout, express-checkout-sdk, express-checkout-backend}/` — happy-path orchestration only. No payload details (those live in api-references).
-5. `skills/api-references/{order-create, session, txns, create-customer}/` — critical-path APIs the integrations call. Base superset schema only; flow variants (mandates, decoupled, pre-auth) are deferred to Phase 2.
+**What's next** — Phase 1, the spine. The deliverable list lives in [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) §Phase 1 scope; that file is the single source so this section can't drift.
 
 Verify every endpoint, field, and error against `euler-workspace-5/`. The endpoint inventory in `.claude/rules/conventions.md` is the starting map. Use the doc-fetch recipe (also in conventions) for prose context, then ground in code.
 
