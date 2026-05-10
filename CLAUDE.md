@@ -30,10 +30,7 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 - Per-region differences if they exist (currently using SEA docs as primary source).
 - **Phase 2:** where merchant-enablement gates land (a `foundations/merchant-enablement/` skill, inline citations inside affected api-reference variants, or both). Don't pre-decide while authoring Phase 1 cards.
 
-**Reference-data corrections discovered during 1A authoring** (deferred to a separate PR — out of scope for 1A):
-
-- KeyAuth row in `reference-data.md` lists `x-merchantid` as part of the scheme. Verified against `AuthKeyService.hs:46-71`: `x-merchantid` is **not** part of KeyAuth — the merchant is resolved from the API key. The header belongs to SignatureAuth/CreditKeyAuth.
-- Webhook HMAC signing row attributes signature attachment to `paymentResponseHashKey`. Only the return-URL signing path actually uses that field (`PaymentStatusHelpers.hs:54`). No webhook-body HMAC code path was located in this audit; outbound webhook auth between Juspay and the merchant endpoint is HTTP Basic Auth (per public docs). Either the webhook-body HMAC code lives somewhere unscanned, or the table conflates two mechanisms.
+**Reference-data corrections discovered during 1A authoring** — tracked as [#3](https://github.com/gupta-ujjwal/juspay-checkout-skills/issues/3) (KeyAuth `x-merchantid` row + webhook HMAC field attribution). Out of scope for 1A; the issue describes both corrections with `euler-workspace-5/` citations.
 
 ---
 
