@@ -61,16 +61,21 @@ From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after 
 
 ### Order service (`euler-api-order/src/Euler/Server.hs:2444`)
 
+**Merchant-facing routes** (a backend agent should call these):
+
 - `POST /orders` — create order (KeyAuth, form-encoded canonical)
 - `POST /orders/{order_id}` — update order
-- `GET /orders/{order_id}` — **canonical merchant-facing order status** (`OrderStatusUrlCapture` at `Server.hs:2540`). Path-parameter form. KeyAuth + `x-merchantid` + `x-routing-id` headers.
-- `GET|POST /orderStatus?order_id=<id>` — legacy query-param order status (`Server.hs:2544-2550`)
-- `GET|POST /order/payment-status` — **payment-status (txn-level)**, distinct from order-status (`Server.hs:2461-2463`). Authoritative status source per architecture.md.
+- `GET /orders/{order_id}` — **canonical order status; this is what a merchant calls** (`OrderStatusUrlCapture` at `Server.hs:2540`). Path-parameter form. KeyAuth + `x-merchantid` + `x-routing-id` headers.
 - `POST /v4/orders` — JWE-encrypted order create
 - `GET|POST /v4/order-status` — JWE-encrypted order status (`Server.hs:2513-2517`)
 - `POST /session` — fetch session for payment page (also `/v4/session` JWE; `Server.hs:1975`, `2515`)
 - `POST /txns/intent/create` — combined order+txn API
 - `POST /v2/orders` — encrypted/signed variant (SignatureAuth)
+
+**Internal / legacy routes** (do not surface in merchant-facing skill cards):
+
+- `GET|POST /orderStatus?order_id=<id>` — legacy query-param order status (`Server.hs:2544-2550`). Predates the path-parameter canonical form; merchants on new integrations use `GET /orders/{order_id}`.
+- `GET|POST /order/payment-status` — internal txn-level payment status (`Server.hs:2461-2463`). Authoritative status source per architecture.md, but **the merchant calls `GET /orders/{order_id}`**, which composes its response from this internal source. Listed here for architectural completeness only.
 
 ### Txn service (`euler-api-txns/src/Euler/API/Txns/Server.hs`)
 
