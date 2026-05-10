@@ -53,7 +53,9 @@ x-routing-id: <customer_id_or_order_id>
 
 ## Response
 
-`OrderStatusResponse` at `euler-api-order/src/Euler/Product/Domain/OrderStatusResponse.hs:124-210`. The full type has 80+ fields (most nullable). Below: the fields a backend agent typically needs. For exhaustive enumeration, read the source file.
+`OrderStatusResponse` at `euler-api-order/src/Euler/Product/Domain/OrderStatusResponse.hs:124-210`. The full type has 80+ fields (most nullable).
+
+> **The tables below show a curated subset** — the fields a HyperCheckout backend agent typically needs. Other fields exist in the response (`mandate`, `metadata`, `chargebacks`, `risk`, `risk_checks`, `offers`, `emi_details`, `installment_plan_block`, `notification`, `additional_info`, `txn_additional_info`, `next_action`, `actions`, `pki_bind_details`, `card_present_payment_details`, etc.) and will appear in real responses. For exhaustive enumeration, read `OrderStatusResponse.hs:124-210` directly.
 
 ### Identification and amounts
 
