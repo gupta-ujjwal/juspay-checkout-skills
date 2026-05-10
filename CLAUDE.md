@@ -6,23 +6,22 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 
 ## Session resume — start here
 
-**Where we are** (as of commit `b3683da`):
+**Where we are** — Phase 1 sub-phased into 1A → 1B → 1C; each sub-phase ships independently:
 
-- Repo initialised on `main`, pushed to `github.com/gupta-ujjwal/juspay-checkout-skills`.
-- README, this CLAUDE.md, and `.gitignore` committed in `24bb37b`.
-- [`srid/agency`](https://github.com/srid/agency) installed via APM in `b3683da` — see _Agency tooling_ below.
-- Skill bank framework adopted from [`docs/framework.md`](./docs/framework.md). `PHASE1-LEARNINGS.md` is superseded — kept as historical context.
-- **No skill cards written yet.** `skills/` directory does not exist yet.
+- **1A (the spine) — in flight on `skills/phase-1a-spine`**: `skills/SKILL.md`, `skills/foundations/authentication/SKILL.md`, `skills/foundations/webhooks-and-signatures/SKILL.md`. Plus convention additions (orchestrator-link rule, silent-gate exclusion) and a README §"Phase 1 omissions" section enumerating the silent-gated capabilities Phase 1 cards deliberately don't cover.
+- **1B (api-references) — not started**: `order-create/`, `session/`, `txns/`, `create-customer/` (and `order-status/` if needed for the orchestrators).
+- **1C (orchestrators) — not started**: `hyper-checkout/`, `express-checkout-sdk/`, `express-checkout-backend/`. Each is a single platform-agnostic backend sequence card; orchestrators link to api-references for payloads, never inline schemas.
+
+**Bank scope is backend-only** — server-to-server APIs and the response payload that the merchant's backend hands to its frontend SDK. SDK rendering, iframe handling, and per-platform initialisation are out of scope (future separate bank).
 
 **Where to read what**:
 
 - [`docs/framework.md`](./docs/framework.md) — the structural framework: five layers, `SKILL.md` anatomy, naming, splitting heuristics, authoring quality bar, phasing.
-- [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) — maintenance rules: source-of-truth discipline, doc-fetching, Phase 1 scope, multi-agent install matrix.
-- [`.claude/rules/reference-data.md`](./.claude/rules/reference-data.md) — verified-against-`euler-workspace-5/` data: merchant-enablement gates table, merchant-facing endpoint inventory, auth schemes. Updates on its own cadence when source advances.
+- [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) — maintenance rules: source-of-truth discipline, doc-fetching, Phase 1 scope, silent-gate exclusion, orchestrator–api-reference contract, multi-agent install matrix.
+- [`.claude/rules/reference-data.md`](./.claude/rules/reference-data.md) — verified-against-`euler-workspace-5/` data: merchant-enablement gates table, merchant-facing endpoint inventory, auth schemes.
+- [`README.md`](./README.md) §"Phase 1 omissions" — the merchant-facing list of silent-gated capabilities deferred to Phase 2.
 
-**What's next** — Phase 1, the spine. The deliverable list lives in [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) §Phase 1 scope; that file is the single source so this section can't drift.
-
-Verify every endpoint, field, and error against `euler-workspace-5/`. The endpoint inventory in `.claude/rules/reference-data.md` is the starting map. Use the doc-fetch recipe (in conventions) for prose context, then ground in code.
+**Verification rule.** Every claim in a card must cite a `euler-workspace-5/` `file:line`. Code beats docs when the two disagree.
 
 **Open decisions** (deferred, ask before acting):
 
@@ -30,6 +29,8 @@ Verify every endpoint, field, and error against `euler-workspace-5/`. The endpoi
 - Distribution model (`curl | bash` vs `npm` vs `brew tap`).
 - Per-region differences if they exist (currently using SEA docs as primary source).
 - **Phase 2:** where merchant-enablement gates land (a `foundations/merchant-enablement/` skill, inline citations inside affected api-reference variants, or both). Don't pre-decide while authoring Phase 1 cards.
+
+**Reference-data corrections discovered during 1A authoring** — tracked as [#3](https://github.com/gupta-ujjwal/juspay-checkout-skills/issues/3) (KeyAuth `x-merchantid` row + webhook HMAC field attribution). Out of scope for 1A; the issue describes both corrections with `euler-workspace-5/` citations.
 
 ---
 
