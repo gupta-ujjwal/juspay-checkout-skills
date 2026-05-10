@@ -43,6 +43,18 @@ Per `docs/framework.md` §7, Phase 1 ships the spine:
 
 **Deferred to Phase 2:** flow-variant sections inside api-references (mandates, decoupled, pre-auth) and merchant-enablement gate placement (foundation skill vs inline citations vs hybrid). Don't pre-decide these in Phase 1 cards — leave gate-affected variants out and let Phase 2 work resolve where they live.
 
+**Phase 1 silent-gate exclusion.** Some merchant-enablement gates fail silently — the call appears to succeed, the capability quietly does nothing. Phase 1 cards omit any step or mechanism that depends on a silent gate; the deferred list is enumerated in [`README.md`](../../README.md) §"Phase 1 omissions". When authoring a card, cross-check `reference-data.md` for "Silent" rows that touch your scope and either exclude the affected step or move it to a "deferred to Phase 2" section with a pointer to the omissions list.
+
+**Bank scope: backend-only.** Cards target the merchant's backend agent. In scope: server-to-server API calls, webhook receivers, and the response payload the backend hands to the frontend so the SDK can initialise. Out of scope: SDK rendering, iframe handling, payment-URL loading, per-platform initialisation. If a card needs frontend SDK code, that's the wrong card — it belongs in a future frontend bank.
+
+## Orchestrator–api-reference contract
+
+Orchestrators describe sequence; api-references describe payloads. The contract:
+
+- Orchestrators **link** to api-reference cards for payload details — they never inline schemas, field lists, or error tables.
+- When Phase 2 adds flow variants (mandates, decoupled, pre-auth) inside api-references, orchestrators **link to the variant section** rather than branching internally on the flow. An orchestrator stays linear; conditionality lives one layer down. (Per Lowy: variants are an axis of change inside api-references; if an orchestrator branches on flow, the flow-axis volatility leaks into the integration layer.)
+- If you find yourself writing field names inside an orchestrator, stop — that content belongs in the api-reference and the orchestrator should link.
+
 ## Multi-agent install matrix
 
 | Agent              | Install location                                       | Format                                   | Notes                |
