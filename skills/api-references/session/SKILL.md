@@ -36,9 +36,7 @@ x-routing-id: <customer_id_or_order_id>
 Content-Type: application/json
 ```
 
-Auth scheme parsed at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`; route auth annotation at `euler-api-order/src/Euler/Server.hs:1975` (`'[ESA.JuspayAuth '[Auth.KeyAuth]]`). `x-routing-id` middleware enforced at `Server.hs:339` (`withXRoutingId`).
-
-`version: YYYY-MM-DD` is **optional**. SEA docs list it as required, but the field is `Maybe Text` in code (`OrderStatusResponse.hs:279` and equivalent on session impl) and absence does not reject the request.
+Auth scheme parsed at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`; route auth annotation at `euler-api-order/src/Euler/Server.hs:1975` (`'[ESA.JuspayAuth '[Auth.KeyAuth]]`). `x-routing-id` middleware enforced at `Server.hs:339` (`withXRoutingId`). The optional `version` header is documented in `foundations/authentication/`.
 
 ## Request body
 

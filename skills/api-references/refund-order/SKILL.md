@@ -47,9 +47,7 @@ x-merchantid: <merchant_id>
 Content-Type: application/x-www-form-urlencoded
 ```
 
-Auth scheme parsed at `AuthKeyService.hs:46-71`. The route uses `whitelistedRef` (KeyAuth-equivalent) per `Server.hs:221`.
-
-`version: YYYY-MM-DD` is **optional** despite the SEA refund doc listing it as required.
+Auth scheme parsed at `AuthKeyService.hs:46-71`. The route uses `whitelistedRef` (KeyAuth-equivalent) per `Server.hs:221`. The optional `version` header is documented in `foundations/authentication/`.
 
 ## Request body
 

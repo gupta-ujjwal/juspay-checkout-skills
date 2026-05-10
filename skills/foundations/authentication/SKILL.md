@@ -53,6 +53,10 @@ The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additi
 - `api-references/order-status/` — requires `Authorization` + `x-merchantid` + `x-routing-id`.
 - `api-references/refund-order/` — requires `Authorization` + `x-merchantid`. The txns service does not apply `withXRoutingId`.
 
+#### Optional headers
+
+`version: YYYY-MM-DD` (a date string) is **optional** on all KeyAuth-protected routes. SEA docs list it as required on several endpoints (session, order-status, refund-order); code disagrees — the field is `Maybe Text` (`euler-api-order/src/Euler/Product/Domain/OrderStatusResponse.hs:279`) and absence does not reject the request. Send it when you want explicit API-version pinning; otherwise omit.
+
 ### TokenAuth — SDK-issued client tokens
 
 Used for client-side calls the SDK makes after the backend has handed over a session. The backend never sends TokenAuth itself — it just sees `client_auth_token` round-trip from `POST /session` (or `POST /orders`) back to the frontend, which the SDK then attaches to its own requests.

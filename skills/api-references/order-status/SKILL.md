@@ -43,9 +43,7 @@ x-merchantid: <merchant_id>
 x-routing-id: <customer_id_or_order_id>
 ```
 
-`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout. Auth scheme parsed at `AuthKeyService.hs:46-71`; `withXRoutingId` middleware at `Server.hs:339`.
-
-`version: YYYY-MM-DD` is **optional** (the field is `Maybe Text` at `OrderStatusResponse.hs:279`); SEA docs over-state it as required.
+`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout. Auth scheme parsed at `AuthKeyService.hs:46-71`; `withXRoutingId` middleware at `Server.hs:339`. The optional `version` header is documented in `foundations/authentication/`.
 
 ## Query parameters
 
