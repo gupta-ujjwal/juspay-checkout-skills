@@ -15,20 +15,20 @@ This skill bank teaches a coding agent how to integrate Juspay's payment product
 
 ## How to navigate
 
-Start with the **integration shape** the merchant has chosen, then follow links into API references and foundations as needed. The three shapes:
+Start with the **integration shape** the merchant has chosen, then follow links into API references and foundations as needed.
 
-| Integration                  | When to use                                                                                                | Skill                                                                   |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **HyperCheckout**            | Merchant wants Juspay to host the payment page; backend creates a session and the SDK opens the hosted UI. | `integrations/hyper-checkout/` _(Phase 1C, not yet authored)_           |
-| **Express Checkout SDK**     | Merchant wants their own UI but Juspay's SDK to handle payment-method rendering and gateway calls.         | `integrations/express-checkout-sdk/` _(Phase 1C, not yet authored)_     |
-| **Express Checkout Backend** | Pure server-to-server. No SDK on the merchant side; merchant orchestrates everything via API.              | `integrations/express-checkout-backend/` _(Phase 1C, not yet authored)_ |
+| Integration                  | When to use                                                                                                | Skill                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **HyperCheckout**            | Merchant wants Juspay to host the payment page; backend creates a session and the SDK opens the hosted UI. | `integrations/hyper-checkout/` _(Phase 1C-HC, not yet authored)_ |
+| **Express Checkout SDK**     | Merchant wants their own UI but Juspay's SDK to handle payment-method rendering and gateway calls.         | _Phase 2 — not yet in scope_                                     |
+| **Express Checkout Backend** | Pure server-to-server. No SDK on the merchant side; merchant orchestrates everything via API.              | _Phase 3 — not yet in scope_                                     |
 
 Every integration depends on:
 
 - `foundations/authentication/` — how to attach credentials to a Juspay request.
 - `foundations/webhooks-and-signatures/` — how to receive and process Juspay's callbacks.
 
-API references (`api-references/order-create/`, `session/`, `txns/`, `create-customer/`) own the payload shapes; integrations link to them rather than re-document.
+API references (Phase 1B-HC: `api-references/{session, order-status, refund-order}/`) own the payload shapes; integrations link to them rather than re-document.
 
 ## Layer contract
 
@@ -39,7 +39,7 @@ integrations/   →  api-references/  →  foundations/
 
 Knowledge flows in one direction. An orchestrator never inlines payload schemas; an api-reference never re-states auth mechanics.
 
-## Status — Phase 1A (spine)
+## Status — Phase 1A spine shipped; Phase 1B-HC next
 
 Currently authored:
 
@@ -47,7 +47,7 @@ Currently authored:
 - `foundations/authentication/`
 - `foundations/webhooks-and-signatures/`
 
-API references and integrations are not yet authored — see [`README.md`](../README.md) §Phase 1 progress.
+Phase 1's vertical is **HyperCheckout end-to-end**: 1B-HC adds the three api-references HyperCheckout calls (`session`, `order-status`, `refund-order`); 1C-HC adds the orchestrator. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
 
 ## Phase 1 omissions
 

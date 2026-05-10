@@ -12,7 +12,7 @@ Verified against `euler-workspace-5/euler-db/src/Euler/DB/Storage/Types/Merchant
 | Save card before auth (tokenization)   | `enableSaveCardBeforeAuth`                             | MerchantAccount.hs:157      | Silent — flow omitted                      |
 | Reauthentication                       | `enableReauthentication`                               | MerchantAccount.hs:104      | Loud                                       |
 | Reauthorization                        | `enableReauthorization`                                | MerchantAccount.hs:105      | Loud                                       |
-| Webhook HMAC signing                   | `enablePaymentResponseHash` + `paymentResponseHashKey` | MerchantAccount.hs:159–160  | Silent — webhooks unsigned                 |
+| Return-URL HMAC signing                | `enablePaymentResponseHash` + `paymentResponseHashKey` | MerchantAccount.hs:159–160  | Silent — return-URL redirect unsigned      |
 | Express Checkout SDK                   | `expressCheckoutEnabled`                               | MerchantAccount.hs:60       | Loud                                       |
 | Inline Checkout                        | `inlineCheckoutEnabled`                                | MerchantAccount.hs:61       | Loud                                       |
 | Whitelabel (HyperCheckout)             | `whitelabelEnabled`                                    | MerchantAccount.hs:111      | Loud                                       |
@@ -49,6 +49,8 @@ Verified against `euler-workspace-5/euler-db/src/Euler/DB/Storage/Types/Merchant
 
 **Loud failures** throw explicit errors (refund disabled, CARD_MOTO not enabled, pre-auth not allowed). **Silent failures** just omit the feature from the response — these are the dangerous ones for AI agents because the integration "works" but quietly drops capability.
 
+**Webhook outbound auth ≠ HMAC signing.** The `enablePaymentResponseHash` + `paymentResponseHashKey` pair is verified only in the return-URL signing path (`euler-api-order/src/Euler/Product/OLTP/Order/PaymentStatusHelpers.hs:54`). Outbound webhook delivery (Juspay → merchant endpoint) uses **HTTP Basic Auth** with merchant-configured username/password — that mechanism is not gated and is not HMAC. If a separate webhook-body HMAC signing path exists in code, it has not been located in `euler-workspace-5/`; do not assume one until verified.
+
 ## Merchant-facing endpoint inventory
 
 From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after edge proxy strips `/ecr`).
@@ -57,11 +59,12 @@ From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after 
 
 - `POST /orders` — create order (KeyAuth, form-encoded canonical)
 - `POST /orders/{order_id}` — update order
-- `GET /orders/{order_id}` — get order status
-- `GET|POST /order/status` — order status (the **authoritative** status source per architecture.md)
+- `GET /orders/{order_id}` — **canonical merchant-facing order status** (`OrderStatusUrlCapture` at `Server.hs:2540`). Path-parameter form. KeyAuth + `x-merchantid` + `x-routing-id` headers.
+- `GET|POST /orderStatus?order_id=<id>` — legacy query-param order status (`Server.hs:2544-2550`)
+- `GET|POST /order/payment-status` — **payment-status (txn-level)**, distinct from order-status (`Server.hs:2461-2463`). Authoritative status source per architecture.md.
 - `POST /v4/orders` — JWE-encrypted order create
-- `GET|POST /v4/order-status` — JWE order status
-- `POST /session` — fetch session for payment page (also `/v4/session` JWE)
+- `GET|POST /v4/order-status` — JWE-encrypted order status (`Server.hs:2513-2517`)
+- `POST /session` — fetch session for payment page (also `/v4/session` JWE; `Server.hs:1975`, `2515`)
 - `POST /txns/intent/create` — combined order+txn API
 - `POST /v2/orders` — encrypted/signed variant (SignatureAuth)
 
@@ -99,8 +102,10 @@ From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after 
 
 ### Auth schemes
 
-- **KeyAuth** — `Authorization: Basic base64(api_key:)` plus `x-merchantid`
-- **TokenAuth** — `Authorization: Bearer <client_auth_token>` (15-min lifetime, for SDK/client)
+- **KeyAuth** — `Authorization: Basic base64(api_key:)` plus required headers `x-merchantid` and `x-routing-id` on most routes
+- **TokenAuth** — bearer-style `client_auth_token` (15-min lifetime, body/query field; SDK/client only — backends never construct this)
 - **SignatureAuth** — querystring (`signature`, `signature_payload`, `merchant_key_id`)
-- **JWEAuth** — encrypted bodies on `/v4/*` endpoints
-- **CreditKeyAuth** — credit-line specific
+- **JWEAuth** — encrypted bodies on `/v4/*` endpoints; reads `x-jp-merchant-id` / `x-merchant-id` / `x-merchantid` headers
+- **CreditKeyAuth** — KeyAuth + `X-Merchant-Id` header + Redis whitelist; credit-line merchants only
+
+**Header semantics under KeyAuth.** The auth scheme proper reads only `Authorization` (`euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`). `x-merchantid` and `x-routing-id` are route-level requirements imposed by middleware (`withXRoutingId` at `euler-api-order/src/Euler/Server.hs:339`) and individual handlers (e.g. `Server.hs:6714` constructs `XMerchantId` from the header value for downstream context). The IN and SEA public docs uniformly require both headers on KeyAuth-protected endpoints; agents should always send them.

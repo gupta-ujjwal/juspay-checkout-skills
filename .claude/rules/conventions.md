@@ -32,16 +32,19 @@ The Juspay docs site exposes two helpers for LLMs:
 
 Use these as starting points, then verify against code.
 
-## Phase 1 scope
+## Phase 1 scope — HyperCheckout end-to-end
 
-Per `docs/framework.md` §7, Phase 1 ships the spine:
+Phase 1 ships **one complete vertical**: a backend agent can integrate HyperCheckout end-to-end (create session, reconcile via order-status, refund). Express Checkout SDK and Express Checkout Backend integrations move to Phase 2 and Phase 3 respectively — same backend-only scope, different orchestrator shape.
 
-- `skills/SKILL.md` — bank-level entry point.
-- `skills/foundations/authentication/` and `skills/foundations/webhooks-and-signatures/`.
-- `skills/integrations/{hyper-checkout, express-checkout-sdk, express-checkout-backend}/` — happy-path orchestration only.
-- `skills/api-references/` for the critical-path APIs the integrations call: Order Create, Session, Txns, Create Customer.
+Sub-phased so each slice is independently shippable:
 
-**Deferred to Phase 2:** flow-variant sections inside api-references (mandates, decoupled, pre-auth) and merchant-enablement gate placement (foundation skill vs inline citations vs hybrid). Don't pre-decide these in Phase 1 cards — leave gate-affected variants out and let Phase 2 work resolve where they live.
+- **1A — spine** (shipped): `skills/SKILL.md` + `foundations/authentication/` + `foundations/webhooks-and-signatures/`.
+- **1B-HC — api-references HyperCheckout actually calls**: `api-references/{session, order-status, refund-order}/`. Each card declares its own auth scheme and required headers; the foundation no longer needs a route-to-scheme table.
+- **1C-HC — orchestrator**: `integrations/hyper-checkout/`. Backend sequence (`POST /session` → return SDK payload to frontend → reconcile via `GET /orders/{order_id}` → handle refunds). Single platform-agnostic card.
+
+**Deferred to Phase 2:** Express Checkout SDK orchestrator + the api-references it adds (`order-create`, `txns`, `create-customer`); flow-variant sections inside api-references (mandates, decoupled, pre-auth); merchant-enablement gate placement (foundation skill vs inline citations vs hybrid).
+
+**Deferred to Phase 3:** Express Checkout Backend orchestrator (pure server-to-server, no SDK).
 
 **Phase 1 silent-gate exclusion.** Some merchant-enablement gates fail silently — the call appears to succeed, the capability quietly does nothing. Phase 1 cards omit any step or mechanism that depends on a silent gate; the deferred list is enumerated in [`README.md`](../../README.md) §"Phase 1 omissions". When authoring a card, cross-check `reference-data.md` for "Silent" rows that touch your scope and either exclude the affected step or move it to a "deferred to Phase 2" section with a pointer to the omissions list.
 

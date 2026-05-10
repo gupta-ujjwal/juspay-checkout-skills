@@ -15,7 +15,7 @@ Read this card when you're implementing the webhook receiver on the merchant's b
 
 - A publicly reachable HTTPS endpoint registered with Juspay (via dashboard) as your webhook URL.
 - Optionally, HTTP Basic Auth credentials (username + password) configured on the dashboard so Juspay authenticates itself when calling your endpoint.
-- `foundations/authentication/` understood — you'll need KeyAuth to call `GET /order/status` for reconciliation.
+- `foundations/authentication/` understood — you'll need KeyAuth (`Authorization` + `x-merchantid` + `x-routing-id`) to call `GET /orders/{order_id}` for reconciliation.
 
 ## Delivery contract
 
@@ -78,13 +78,13 @@ Additional event families exist for mandates and notifications and follow their 
 
 ## Reconcile, don't trust
 
-Juspay's architecture treats `GET /order/status` (and `POST /order/status`) as the **authoritative source of order state**. Webhooks are event hints — they tell you _something happened_, but the body may lag, may be redelivered, or may be missed entirely.
+Juspay's architecture treats the order-status API as the **authoritative source of order state**. Webhooks are event hints — they tell you _something happened_, but the body may lag, may be redelivered, or may be missed entirely.
 
 The recommended pattern:
 
 1. Receive the webhook, verify Basic Auth, persist the event, return `200`.
-2. Asynchronously, call `GET /order/status?order_id=<id>` (KeyAuth) and treat that response as ground truth.
-3. Update your local order state from `/order/status`, not from the webhook body.
+2. Asynchronously, call `GET /orders/{order_id}` (KeyAuth + `x-merchantid` + `x-routing-id`) and treat that response as ground truth. The path-parameter form is the canonical merchant-facing route (`euler-api-order/src/Euler/Server.hs:2540`, `OrderStatusUrlCapture`); see `api-references/order-status/` (Phase 1B-HC) for the full schema.
+3. Update your local order state from the order-status response, not from the webhook body.
 
 This pattern is robust to redelivery, ordering, and missed events.
 
@@ -110,7 +110,7 @@ See [`README.md`](../../../README.md) §"Phase 1 omissions" for the full deferra
 | ------------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Webhooks arrive but processing skips events | Returning `200` only after successful processing; transient failures look like ack to Juspay | Persist → ack → process. The ack is for "I received it", not "I handled it".              |
 | Same order appears succeeded twice          | Handler not idempotent; redelivery hit it twice                                              | Dedupe on `event.id` or `(order_id, event_name)` before applying business logic.          |
-| Order state in your DB lags Juspay          | Trusting webhook body as final state                                                         | After receiving the event, call `/order/status` and reconcile from there.                 |
+| Order state in your DB lags Juspay          | Trusting webhook body as final state                                                         | After receiving the event, call `GET /orders/{order_id}` and reconcile from there.        |
 | Juspay reports webhooks failing             | Endpoint returning non-`200`, or Basic Auth mismatch (`401`)                                 | Check your dashboard delivery log, verify Basic Auth credentials match what's configured. |
 
 ## Related skills
