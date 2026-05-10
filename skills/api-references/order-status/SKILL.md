@@ -93,7 +93,9 @@ x-routing-id: <customer_id_or_order_id>
 
 ### Status values
 
-The `status` enum is `OrderStatus` at `euler-db/src/Euler/Types/Order.hs:158-181` (23 constructors). Wire-format names in JSON (most-common merchant-facing values):
+The `status` enum is `OrderStatus` at `euler-db/src/Euler/Types/Order.hs:158-181` — **23 constructors total**.
+
+> **Subset shown below.** The 12 wire values an agent will commonly receive on a HyperCheckout integration. The other 11 (`Authorizing`, `CaptureFailed`, `CaptureInitiated`, `Created`, `Error`, `MerchantVoided`, `Declined`, `AutoVoided`, `VoidFailed`, `VoidInitiated`, `NotFound`) **will arrive in production** for gateway edge cases, pre-auth flows, and merchant-side voids. Treat any unknown status as terminal-uncertain: do not assume success or failure; call `GET /orders/{order_id}` again or escalate. See `Order.hs:158-181` for the canonical list.
 
 | Wire value              | Meaning                                                                     |
 | ----------------------- | --------------------------------------------------------------------------- |
@@ -109,8 +111,6 @@ The `status` enum is `OrderStatus` at `euler-db/src/Euler/Types/Order.hs:158-181
 | `VOIDED`                | Pre-auth voided (Phase 2 flow).                                             |
 | `COD_INITIATED`         | COD flow started; settlement happens out-of-band.                           |
 | `TO_BE_CHARGED`         | Mandate / scheduled flow (Phase 2).                                         |
-
-Other constructors exist (`Authorizing`, `CaptureFailed`, `CaptureInitiated`, `Created`, `Error`, `MerchantVoided`, `Declined`, `AutoVoided`, `VoidFailed`, `VoidInitiated`, `NotFound`) — see source for the canonical list.
 
 ### Transaction details
 
