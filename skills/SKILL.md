@@ -39,15 +39,15 @@ integrations/   →  api-references/  →  foundations/
 
 Knowledge flows in one direction. An orchestrator never inlines payload schemas; an api-reference never re-states auth mechanics.
 
-## Status — Phase 1A spine shipped; Phase 1B-HC next
+## Status — Phase 1A + 1B-HC shipped; Phase 1C-HC next
 
 Currently authored:
 
 - `skills/SKILL.md` (this file)
-- `foundations/authentication/`
-- `foundations/webhooks-and-signatures/`
+- `foundations/authentication/`, `foundations/webhooks-and-signatures/`
+- `api-references/session/`, `api-references/order-status/`, `api-references/refund-order/`
 
-Phase 1's vertical is **HyperCheckout end-to-end**: 1B-HC adds the three api-references HyperCheckout calls (`session`, `order-status`, `refund-order`); 1C-HC adds the orchestrator. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
+Phase 1's vertical is **HyperCheckout end-to-end**: 1C-HC adds the orchestrator (`integrations/hyper-checkout/`) that sequences the three api-references above. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
 
 ## Phase 1 omissions
 

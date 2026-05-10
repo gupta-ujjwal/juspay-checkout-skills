@@ -17,7 +17,7 @@ Verified against `euler-workspace-5/euler-db/src/Euler/DB/Storage/Types/Merchant
 | Inline Checkout                        | `inlineCheckoutEnabled`                                | MerchantAccount.hs:61       | Loud                                       |
 | Whitelabel (HyperCheckout)             | `whitelabelEnabled`                                    | MerchantAccount.hs:111      | Loud                                       |
 | Refunds via dashboard                  | `enableRefundsInDashboard`                             | MerchantAccount.hs:137      | Loud                                       |
-| Instant refund                         | `enabledInstantRefund`                                 | MerchantAccount.hs:191      | Loud — 403 from Refund/Decider.hs          |
+| Instant refund                         | `enabledInstantRefund`                                 | MerchantAccount.hs:191      | Loud — 400 from Refund/Validation.hs:1072  |
 | Auto-refund on conflicts               | `autoRefundConflictTransactions`                       | MerchantAccount.hs:158      | Silent                                     |
 | Auto-refund duplicate charges          | `autoRefundMultipleChargedTransactions`                | MerchantAccount.hs:192      | Silent                                     |
 | Mandate auto-retry                     | `executeMandateAutoRetryEnabled`                       | MerchantAccount.hs:201      | Silent                                     |

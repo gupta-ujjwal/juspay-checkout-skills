@@ -8,11 +8,11 @@ Agent Skills for integrating with Juspay's checkout products. Drop these into yo
 
 Phase 1 is sub-phased and ships **HyperCheckout end-to-end** as one complete vertical. Express Checkout SDK is Phase 2; Express Checkout Backend is Phase 3.
 
-| Sub-phase                                  | Cards                                                                     | State       |
-| ------------------------------------------ | ------------------------------------------------------------------------- | ----------- |
-| 1A — spine                                 | bank `SKILL.md`, `foundations/{authentication, webhooks-and-signatures}/` | shipped     |
-| 1B-HC — api-references HyperCheckout calls | `api-references/{session, order-status, refund-order}/`                   | next        |
-| 1C-HC — orchestrator                       | `integrations/hyper-checkout/`                                            | after 1B-HC |
+| Sub-phase                                  | Cards                                                                     | State   |
+| ------------------------------------------ | ------------------------------------------------------------------------- | ------- |
+| 1A — spine                                 | bank `SKILL.md`, `foundations/{authentication, webhooks-and-signatures}/` | shipped |
+| 1B-HC — api-references HyperCheckout calls | `api-references/{session, order-status, refund-order}/`                   | shipped |
+| 1C-HC — orchestrator                       | `integrations/hyper-checkout/`                                            | next    |
 
 ---
 
