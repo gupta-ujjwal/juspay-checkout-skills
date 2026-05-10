@@ -49,7 +49,7 @@ Per `docs/framework.md` §7, Phase 1 ships the spine:
 - `skills/integrations/{hyper-checkout, express-checkout-sdk, express-checkout-backend}/` — happy-path orchestration only.
 - `skills/api-references/` for the critical-path APIs the integrations call: Order Create, Session, Txns, Create Customer.
 
-**Deferred to Phase 2:** flow-variant sections inside api-references (mandates, decoupled, pre-auth) and merchant-gate placement (foundation skill vs inline citations vs hybrid). Don't pre-decide these in Phase 1 cards — leave gate-affected variants out and let Phase 2 work resolve where they live.
+**Deferred to Phase 2:** flow-variant sections inside api-references (mandates, decoupled, pre-auth) and merchant-enablement gate placement (foundation skill vs inline citations vs hybrid). Don't pre-decide these in Phase 1 cards — leave gate-affected variants out and let Phase 2 work resolve where they live.
 
 ## Reference data
 
