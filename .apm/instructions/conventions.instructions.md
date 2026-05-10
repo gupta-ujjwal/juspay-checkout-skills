@@ -59,6 +59,43 @@ Orchestrators describe sequence; api-references describe payloads. The contract:
 - When Phase 2 adds flow variants (mandates, decoupled, pre-auth) inside api-references, orchestrators **link to the variant section** rather than branching internally on the flow. An orchestrator stays linear; conditionality lives one layer down. (Per Lowy: variants are an axis of change inside api-references; if an orchestrator branches on flow, the flow-axis volatility leaks into the integration layer.)
 - If you find yourself writing field names inside an orchestrator, stop — that content belongs in the api-reference and the orchestrator should link.
 
+### Worked counter-example — do not do this
+
+A Phase 2 author touching `integrations/express-checkout-sdk/SKILL.md` to add mandate support might be tempted to write:
+
+```markdown
+## Step 2 — create the order
+
+### For one-time payments
+
+POST `/orders` with `order_id`, `amount`, `currency`, `customer_id`...
+
+### For mandates
+
+POST `/orders` with `order_id`, `amount`, `currency`, `customer_id`,
+`mandate.max_amount`, `mandate.frequency`, `mandate.start_date`...
+
+### For pre-auth
+
+POST `/orders` with `order_id`, `amount`, `currency`, `auto_capture: false`...
+```
+
+This violates the contract three ways: payload field names are inlined (orchestrator complecting api-reference content), the orchestrator branches on flow (flow-axis volatility leaking up from `api-references/order-create/`), and per-flow sections will diverge from the api-reference's own variant sections as both evolve.
+
+Instead, write a single linear step that links into the api-reference's variant section:
+
+```markdown
+## Step 2 — create the order
+
+Call `POST /orders` per `api-references/order-create/`. Pick the variant:
+
+- One-time payments: §"Happy path" of `api-references/order-create/SKILL.md`.
+- Mandate flows: §"Mandate variant" of `api-references/order-create/SKILL.md`.
+- Pre-auth flows: §"Pre-auth variant" of `api-references/order-create/SKILL.md`.
+```
+
+The orchestrator stays linear; conditionality is delegated to the api-reference.
+
 ## Multi-agent install matrix
 
 | Agent              | Install location                                       | Format                                   | Notes                |
