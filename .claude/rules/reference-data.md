@@ -49,7 +49,7 @@ Verified against `euler-workspace-5/euler-db/src/Euler/DB/Storage/Types/Merchant
 
 **Loud failures** throw explicit errors (refund disabled, CARD_MOTO not enabled, pre-auth not allowed). **Silent failures** just omit the feature from the response — these are the dangerous ones for AI agents because the integration "works" but quietly drops capability.
 
-**Webhook outbound auth ≠ HMAC signing.** The `enablePaymentResponseHash` + `paymentResponseHashKey` pair is verified only in the return-URL signing path (`euler-api-order/src/Euler/Product/OLTP/Order/PaymentStatusHelpers.hs:54`). Outbound webhook delivery (Juspay → merchant endpoint) uses **HTTP Basic Auth** with merchant-configured username/password — that mechanism is not gated and is not HMAC. If a separate webhook-body HMAC signing path exists in code, it has not been located in `euler-workspace-5/`; do not assume one until verified.
+**Webhook outbound auth ≠ HMAC signing.** Outbound webhook delivery (Juspay → merchant endpoint) uses **HTTP Basic Auth** with merchant-configured username/password — that mechanism is not gated and is not HMAC. The "Return-URL HMAC signing" gate above governs only the return-URL signing path. See "Unverified / open questions" below for the webhook-body HMAC status.
 
 ## Merchant-facing endpoint inventory
 
@@ -109,3 +109,9 @@ From `euler-workspace-5` Servant/Wai route definitions. **Public paths** (after 
 - **CreditKeyAuth** — KeyAuth + `X-Merchant-Id` header + Redis whitelist; credit-line merchants only
 
 **Header semantics under KeyAuth.** The auth scheme proper reads only `Authorization` (`euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`). `x-merchantid` and `x-routing-id` are route-level requirements imposed by middleware (`withXRoutingId` at `euler-api-order/src/Euler/Server.hs:339`) and individual handlers (e.g. `Server.hs:6714` constructs `XMerchantId` from the header value for downstream context). The IN and SEA public docs uniformly require both headers on KeyAuth-protected endpoints; agents should always send them.
+
+## Unverified / open questions
+
+These items are *not* verified against `euler-workspace-5/`. They are documented unknowns to be resolved before downstream cards rely on them; do not treat anything in this section as ground truth.
+
+- **Webhook-body HMAC signing.** Only the return-URL signing path uses `paymentResponseHashKey` (`euler-api-order/src/Euler/Product/OLTP/Order/PaymentStatusHelpers.hs:54`). No webhook-body HMAC signing code path was located in this audit. If such a path exists (for example in a webhook-delivery worker or adapter that wasn't read), agents reading the bank may incorrectly conclude their webhooks are unsigned. Tracked in [#8](https://github.com/gupta-ujjwal/juspay-checkout-skills/issues/8) — to be resolved before Phase 2 webhook-verification cards ship.
