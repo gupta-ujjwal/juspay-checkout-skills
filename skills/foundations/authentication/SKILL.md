@@ -31,32 +31,43 @@ The internal Servant routes in `euler-workspace-5/` carry an `/ecr` prefix — t
 
 The default scheme for backend-only calls (`POST /orders`, `POST /session`, `POST /txns`, refunds, order-status, customer APIs, etc.).
 
-#### Header
+#### Headers
 
 ```http
 Authorization: Basic <base64(api_key + ":")>
+x-merchantid: <merchant_id>
+x-routing-id: <customer_id_or_order_id>
 ```
 
-The colon-suffixed empty password is required — this is HTTP Basic with the API key as username and an empty password.
+Three headers, all required on most KeyAuth-protected endpoints:
 
-`x-merchantid` is **not** part of KeyAuth. The merchant identity is resolved from the API key itself by looking up the corresponding `MerchantAccount`. Do not add `x-merchantid` to KeyAuth requests; it's a SignatureAuth-specific field.
+- **`Authorization`** — HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
+- **`x-merchantid`** — your merchant ID from the dashboard. Required at the route handler layer (constructs `XMerchantId` for downstream context, e.g. `euler-api-order/src/Euler/Server.hs:6714`).
+- **`x-routing-id`** — typically the customer ID; falls back to order ID for guest checkout. Enforced by the `withXRoutingId` middleware (`Server.hs:339`); used for routing/consistency across services.
+
+The auth scheme proper reads only `Authorization` (see verification path below); `x-merchantid` and `x-routing-id` are route-level requirements layered on top. The auth check passes when only `Authorization` is sent, but downstream handlers and middleware reject the request without the other two. Both IN and SEA public docs uniformly require all three.
 
 #### Verification path
 
 - Authorization header parsed at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`.
 - API key extracted by stripping the `Basic` prefix and base64-decoding, then taking everything before the first `:` — see `extractApiKey` at `AuthKeyService.hs:93-94`.
 - Merchant account looked up by API key at `AuthKeyService.hs:71` (`fetchMerchantAccountRecordUsingApiKey`).
+- `x-routing-id` middleware enforced at `euler-api-order/src/Euler/Server.hs:339` (`withXRoutingId`).
 
 #### Worked example (sandbox)
 
 ```bash
 API_KEY="your_sandbox_api_key"
+MERCHANT_ID="your_merchant_id"
+CUSTOMER_ID="cust_001"
 AUTH=$(printf '%s:' "$API_KEY" | base64)
 
-curl -sSL -X POST "https://sandbox.juspay.in/orders" \
+curl -sSL -X POST "https://sandbox.juspay.in/session" \
   -H "Authorization: Basic $AUTH" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d 'order_id=ord_001&amount=100.00&currency=SGD&customer_id=cust_001'
+  -H "x-merchantid: $MERCHANT_ID" \
+  -H "x-routing-id: $CUSTOMER_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"order_id":"ord_001","amount":"100.00","customer_id":"cust_001","action":"paymentPage"}'
 ```
 
 ### TokenAuth — SDK-issued client tokens
@@ -116,22 +127,21 @@ sig_b64 = base64.b64encode(signature).decode()
 
 ## Choosing a scheme
 
-| You're calling                                                                                 | Use                                                                                        |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `POST /orders`, `POST /session`, `POST /txns`, `GET /order/status`, refund APIs, customer APIs | KeyAuth                                                                                    |
-| `POST /v2/orders` (signed)                                                                     | SignatureAuth                                                                              |
-| Anything from the merchant's frontend SDK                                                      | TokenAuth (the SDK handles this; the backend issues the token via `/session` or `/orders`) |
+Each api-reference card declares the scheme its endpoint expects (Phase 1B-HC: `session/`, `order-status/`, `refund-order/`). The defaults across Phase 1:
 
-If you can't tell which scheme a route expects, check the api-reference card for that route — Phase 1B api-references explicitly state the auth scheme.
+- **KeyAuth** — server-to-server merchant-API calls (HyperCheckout's `POST /session`, `GET /orders/{order_id}`, refunds).
+- **SignatureAuth** — `POST /v2/orders` and other RSA-signed-body endpoints.
+- **TokenAuth** — never constructed by the backend; the SDK on the frontend uses it after the backend hands over `client_auth_token` from a `/session` or `/orders` response.
 
 ## Common errors
 
-| Symptom                                      | Likely cause                                                                                         | Fix                                                                            |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `401 Unauthorized` on every request          | API key not base64-encoded with trailing `:` (the colon-empty-password is mandatory for HTTP Basic). | Encode `printf '%s:' "$API_KEY" \| base64`, not just `base64 <<< "$API_KEY"`.  |
-| `401` only on some routes                    | Mixing schemes — sending KeyAuth where SignatureAuth is required (or vice-versa).                    | Look up the route in its api-reference card and match the scheme.              |
-| TokenAuth call returns `Token expired`       | Token older than 15 minutes.                                                                         | Backend issues a fresh token via `/session`; tokens are not refreshable.       |
-| Signature verification fails on `/v2/orders` | `signature_payload` doesn't match the bytes that were signed (encoding/whitespace difference).       | Sign the exact byte string you transmit; do not re-canonicalise after signing. |
+| Symptom                                       | Likely cause                                                                                         | Fix                                                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `401 Unauthorized` on every request           | API key not base64-encoded with trailing `:` (the colon-empty-password is mandatory for HTTP Basic). | Encode `printf '%s:' "$API_KEY" \| base64`, not just `base64 <<< "$API_KEY"`.                                |
+| `400 Bad Request` despite valid Authorization | Missing `x-merchantid` or `x-routing-id` header. The auth scheme passes; the route handler rejects.  | Always send all three headers (`Authorization`, `x-merchantid`, `x-routing-id`) on KeyAuth-protected routes. |
+| `401` only on some routes                     | Mixing schemes — sending KeyAuth where SignatureAuth is required (or vice-versa).                    | Look up the route in its api-reference card and match the scheme.                                            |
+| TokenAuth call returns `Token expired`        | Token older than 15 minutes.                                                                         | Backend issues a fresh token via `/session`; tokens are not refreshable.                                     |
+| Signature verification fails on `/v2/orders`  | `signature_payload` doesn't match the bytes that were signed (encoding/whitespace difference).       | Sign the exact byte string you transmit; do not re-canonicalise after signing.                               |
 
 ## Out of scope for Phase 1
 

@@ -6,11 +6,11 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 
 ## Session resume — start here
 
-**Where we are** — Phase 1 sub-phased into 1A → 1B → 1C; each sub-phase ships independently:
+**Where we are** — Phase 1 narrowed to **HyperCheckout end-to-end**. Express Checkout SDK and Express Checkout Backend become Phase 2 and Phase 3 respectively.
 
-- **1A (the spine) — in flight on `skills/phase-1a-spine`**: `skills/SKILL.md`, `skills/foundations/authentication/SKILL.md`, `skills/foundations/webhooks-and-signatures/SKILL.md`. Plus convention additions (orchestrator-link rule, silent-gate exclusion) and a README §"Phase 1 omissions" section enumerating the silent-gated capabilities Phase 1 cards deliberately don't cover.
-- **1B (api-references) — not started**: `order-create/`, `session/`, `txns/`, `create-customer/` (and `order-status/` if needed for the orchestrators).
-- **1C (orchestrators) — not started**: `hyper-checkout/`, `express-checkout-sdk/`, `express-checkout-backend/`. Each is a single platform-agnostic backend sequence card; orchestrators link to api-references for payloads, never inline schemas.
+- **1A (spine) — shipped** in PR #7 (commit `43323e1` on main): `skills/SKILL.md`, `skills/foundations/authentication/SKILL.md`, `skills/foundations/webhooks-and-signatures/SKILL.md`.
+- **1B-HC (api-references HyperCheckout calls) — next**: `api-references/{session, order-status, refund-order}/`. Each declares its own auth scheme and required headers; the foundation no longer needs a route-to-scheme table (closes #6).
+- **1C-HC (orchestrator) — after 1B-HC**: `integrations/hyper-checkout/`. The "reconcile via order-status" pattern moves here from the webhooks foundation (closes #5).
 
 **Bank scope is backend-only** — server-to-server APIs and the response payload that the merchant's backend hands to its frontend SDK. SDK rendering, iframe handling, and per-platform initialisation are out of scope (future separate bank).
 
@@ -30,7 +30,13 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 - Per-region differences if they exist (currently using SEA docs as primary source).
 - **Phase 2:** where merchant-enablement gates land (a `foundations/merchant-enablement/` skill, inline citations inside affected api-reference variants, or both). Don't pre-decide while authoring Phase 1 cards.
 
-**Reference-data corrections discovered during 1A authoring** — tracked as [#3](https://github.com/gupta-ujjwal/juspay-checkout-skills/issues/3) (KeyAuth `x-merchantid` row + webhook HMAC field attribution). Out of scope for 1A; the issue describes both corrections with `euler-workspace-5/` citations.
+**Reference-data corrections (closed by PR-A — issue #3):**
+
+The original #3 framed two stale rows. Re-verifying against `euler-workspace-5/` revealed the picture was different:
+
+- KeyAuth row was **operationally right** in saying "Authorization plus `x-merchantid`". The auth scheme proper (`AuthKeyService.hs:46-71`) reads only `Authorization`, but most KeyAuth-protected routes additionally require `x-merchantid` (route handlers construct `XMerchantId` for downstream context, e.g. `Server.hs:6714`) and `x-routing-id` (enforced by `withXRoutingId` middleware at `Server.hs:339`). Both IN and SEA public docs uniformly require all three. The Phase 1A foundation auth card had over-corrected by stating `x-merchantid` is "not part of KeyAuth" — that has been reverted in PR-A and now reflects the route-level header reality.
+- Webhook HMAC row **was** wrong. `paymentResponseHashKey` is verified only in return-URL signing (`PaymentStatusHelpers.hs:54`); outbound webhook delivery uses HTTP Basic Auth (merchant-configured creds, not gated, not HMAC). The row is renamed to "Return-URL HMAC signing" and a clarifying note distinguishes the two mechanisms.
+- Endpoint inventory listed `GET|POST /order/status` — wrong path. The canonical merchant-facing route is `GET /orders/{order_id}` (`Server.hs:2540`, `OrderStatusUrlCapture`); `/order/payment-status` (`Server.hs:2461`) is a distinct txn-level route; `/orderStatus?order_id=` is a legacy query-param variant. The webhooks foundation card pointed at `/order/status` — fixed in PR-A to `GET /orders/{order_id}`.
 
 ---
 

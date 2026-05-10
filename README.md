@@ -4,6 +4,16 @@ Agent Skills for integrating with Juspay's checkout products. Drop these into yo
 
 > **Status:** under construction. Not yet ready for merchant use.
 
+## Status
+
+Phase 1 is sub-phased and ships **HyperCheckout end-to-end** as one complete vertical. Express Checkout SDK is Phase 2; Express Checkout Backend is Phase 3.
+
+| Sub-phase                                  | Cards                                                                     | State       |
+| ------------------------------------------ | ------------------------------------------------------------------------- | ----------- |
+| 1A — spine                                 | bank `SKILL.md`, `foundations/{authentication, webhooks-and-signatures}/` | shipped     |
+| 1B-HC — api-references HyperCheckout calls | `api-references/{session, order-status, refund-order}/`                   | next        |
+| 1C-HC — orchestrator                       | `integrations/hyper-checkout/`                                            | after 1B-HC |
+
 ---
 
 ## What this is
@@ -14,13 +24,13 @@ Inspired by [PhonePe's `phonepe-pg-skills`](https://github.com/PhonePe/phonepe-p
 
 ## Structure
 
-| Layer                 | What it owns                                                                                                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`foundations/`**    | Cross-cutting concerns: authentication, idempotency-and-retries, webhooks-and-signatures, error model, sandbox-and-testing                                                            |
-| **`api-references/`** | One skill per Juspay API (Order Create, Session, Txns, Create Customer, …). Full superset schema; payment-flow variants (mandates, pre-auth, decoupled) folded in as variant sections |
-| **`integrations/`**   | Three orchestrators: `hyper-checkout`, `express-checkout-sdk`, `express-checkout-backend`. Own the sequence of API calls; delegate payloads to `api-references/`                      |
-| **`go-live/`**        | Production-readiness checklist                                                                                                                                                        |
-| **Bank `SKILL.md`**   | Top-level entry point that orients the agent across the bank                                                                                                                          |
+| Layer                 | What it owns                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`foundations/`**    | Cross-cutting concerns: authentication, webhooks-and-signatures, and (later) idempotency-and-retries, error model, sandbox-and-testing                                          |
+| **`api-references/`** | One skill per Juspay API. Full superset schema; payment-flow variants (mandates, pre-auth, decoupled) folded in as variant sections later                                       |
+| **`integrations/`**   | Per-product orchestrators. Phase 1 ships `hyper-checkout`; Phase 2 adds `express-checkout-sdk`; Phase 3 adds `express-checkout-backend`. Delegate payloads to `api-references/` |
+| **`go-live/`**        | Production-readiness checklist (later phase)                                                                                                                                    |
+| **Bank `SKILL.md`**   | Top-level entry point that orients the agent across the bank                                                                                                                    |
 
 ## Skill bank vs. MCP server
 
