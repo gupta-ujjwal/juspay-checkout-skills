@@ -58,7 +58,7 @@ Skill cards are grounded in the Juspay Euler source code — not just the public
 
 ## Contributing
 
-Skill cards must be code-verified. The structural framework (layers, `SKILL.md` anatomy, naming, quality bar) lives in [`docs/framework.md`](./docs/framework.md); the maintainer rules (source-of-truth discipline, doc-fetch recipe, verified merchant-enablement gates, endpoint inventory) live in [`.claude/rules/conventions.md`](./.claude/rules/conventions.md). [`CLAUDE.md`](./CLAUDE.md) is the session-resume entry point.
+Skill cards must be code-verified. The structural framework (layers, `SKILL.md` anatomy, naming, quality bar) lives in [`docs/framework.md`](./docs/framework.md); the maintainer rules (source-of-truth discipline, doc-fetch recipe, Phase 1 scope) live in [`.claude/rules/conventions.md`](./.claude/rules/conventions.md); the verified-against-source data (merchant-enablement gates, endpoint inventory) lives in [`.claude/rules/reference-data.md`](./.claude/rules/reference-data.md). [`CLAUDE.md`](./CLAUDE.md) is the session-resume entry point.
 
 ## License
 

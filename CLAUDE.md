@@ -17,11 +17,12 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 **Where to read what**:
 
 - [`docs/framework.md`](./docs/framework.md) — the structural framework: five layers, `SKILL.md` anatomy, naming, splitting heuristics, authoring quality bar, phasing.
-- [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) — maintenance rules: source-of-truth discipline, doc-fetching, Phase 1 scope, reference data (gates table + endpoint inventory), multi-agent install matrix.
+- [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) — maintenance rules: source-of-truth discipline, doc-fetching, Phase 1 scope, multi-agent install matrix.
+- [`.claude/rules/reference-data.md`](./.claude/rules/reference-data.md) — verified-against-`euler-workspace-5/` data: merchant-enablement gates table, merchant-facing endpoint inventory, auth schemes. Updates on its own cadence when source advances.
 
 **What's next** — Phase 1, the spine. The deliverable list lives in [`.claude/rules/conventions.md`](./.claude/rules/conventions.md) §Phase 1 scope; that file is the single source so this section can't drift.
 
-Verify every endpoint, field, and error against `euler-workspace-5/`. The endpoint inventory in `.claude/rules/conventions.md` is the starting map. Use the doc-fetch recipe (also in conventions) for prose context, then ground in code.
+Verify every endpoint, field, and error against `euler-workspace-5/`. The endpoint inventory in `.claude/rules/reference-data.md` is the starting map. Use the doc-fetch recipe (in conventions) for prose context, then ground in code.
 
 **Open decisions** (deferred, ask before acting):
 
