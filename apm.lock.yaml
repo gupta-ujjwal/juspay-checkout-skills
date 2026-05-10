@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-05-10T12:03:10.964287+00:00'
+generated_at: '2026-05-10T12:04:19.723208+00:00'
 apm_version: 0.12.1
 dependencies:
 - repo_url: srid/agency
@@ -30,4 +30,4 @@ dependencies:
 local_deployed_files:
 - .claude/rules/conventions.md
 local_deployed_file_hashes:
-  .claude/rules/conventions.md: sha256:98c2d0f97839907bd167b1608a693762b929102340466e6223183cc9b08d71fb
+  .claude/rules/conventions.md: sha256:c94e67914f77bbfc699efc8f42a4ef1934eded36a6f840e518a65de2129fd514

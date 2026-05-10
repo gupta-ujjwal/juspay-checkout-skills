@@ -1,6 +1,8 @@
 This file guides any AI agent (and the maintainer) working _on_ the skill bank. The skill cards themselves are merchant-facing; this file is for repo maintenance.
 
-The structural framework — five layers, `SKILL.md` anatomy, naming, splitting heuristics, authoring quality bar, phasing — is defined in [`docs/framework.md`](../../docs/framework.md). This file holds working rules the framework doesn't carry: source-of-truth discipline, doc-fetching, the Phase 1 scope, grounded reference data, and the multi-agent install matrix.
+The structural framework — five layers, `SKILL.md` anatomy, naming, splitting heuristics, authoring quality bar, phasing — is defined in [`docs/framework.md`](../../docs/framework.md). Read it before authoring any skill. This file holds working rules the framework doesn't carry: source-of-truth discipline, doc-fetching, the Phase 1 scope, grounded reference data, and the multi-agent install matrix.
+
+**Bank root in this repo:** `skills/`.
 
 ---
 
@@ -29,12 +31,6 @@ The Juspay docs site exposes two helpers for LLMs:
    ```
 
 Use these as starting points, then verify against code.
-
-## Framework reference
-
-The skill bank's structure is defined in [`docs/framework.md`](../../docs/framework.md): five layers (`foundations/`, `api-references/`, `integrations/`, `go-live/`, bank-level `SKILL.md`), the `SKILL.md` anatomy, naming conventions, the splitting-vs-merging heuristic, the authoring quality bar, and phasing. Read it before authoring any skill.
-
-**Bank root in this repo:** `skills/`.
 
 ## Phase 1 scope
 
