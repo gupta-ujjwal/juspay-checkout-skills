@@ -32,7 +32,7 @@ HTTP Basic with the API key as username and an empty password. The colon-suffixe
 
 #### Route-level headers
 
-The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additionally require `x-merchantid` (always) and `x-routing-id` (most, but not all — e.g. refund). Header requirements vary per route — **consult the api-reference card for the route you're calling**; each card declares its full required-header set at the top.
+The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additionally require `x-merchantid` (always) and `x-routing-id` (most, but not all — e.g. refund). Header requirements vary per route — **consult the api-reference card for the route you're calling**; each card declares its full required-header set at the top. As an anchor example, `api-references/session/` requires `Authorization` + `x-merchantid` + `x-routing-id`; `api-references/refund-order/` requires `Authorization` + `x-merchantid` only.
 
 #### `version` header
 
