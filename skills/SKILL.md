@@ -77,8 +77,8 @@ Knowledge flows in one direction. An orchestrator never inlines payload schemas;
 Currently authored:
 
 - `skills/SKILL.md` (this file)
-- `foundations/authentication/`, `foundations/webhooks-and-signatures/`
-- `api-references/session/`, `api-references/order-status/`, `api-references/refund-order/`
+- `foundations/{authentication, webhooks-and-signatures, order-status-actions, error-codes}/`
+- `api-references/{session, order-status, refund-order, create-customer}/`
 - `integrations/hyper-checkout/`
 
 Phase 1 ships the HyperCheckout backend vertical as one complete integration. Express Checkout SDK is Phase 2; Express Checkout Backend is Phase 3. See [`README.md`](../README.md) §Status.

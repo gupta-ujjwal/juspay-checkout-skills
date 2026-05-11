@@ -139,6 +139,7 @@ Don't retry network failures with a fresh `unique_request_id` — the original m
 
 - `foundations/authentication/` — auth scheme.
 - `foundations/webhooks-and-signatures/` — `REFUND_SUCCEEDED` / `REFUND_FAILED` events fire after async settlement.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes, including all refund-specific ones.
 - `api-references/order-status/` — full schema of the response object; the canonical state read.
 - `api-references/session/` — creates the order this refunds against.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — orchestrator that calls this card.
+- `integrations/hyper-checkout/` — orchestrator that calls this card.

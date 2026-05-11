@@ -196,6 +196,8 @@ The response `status` field tells you what to do next:
 
 - `foundations/authentication/` — auth scheme.
 - `foundations/webhooks-and-signatures/` — receive event hints; reconcile via this card.
+- `foundations/order-status-actions/` — the `status → action` decision table for interpreting the response.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes.
 - `api-references/session/` — creates the `order_id` you query here.
 - `api-references/refund-order/` — refund operations are reflected back into the `refunds[]` array of this response.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — orchestrator that sequences this call after webhooks.
+- `integrations/hyper-checkout/` — orchestrator that sequences this call after webhooks / handover.

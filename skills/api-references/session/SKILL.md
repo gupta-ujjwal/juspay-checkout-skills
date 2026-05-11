@@ -188,6 +188,8 @@ The merchant's server forwards the entire `sdk_payload` field of the response to
 
 - `foundations/authentication/` — auth scheme details.
 - `foundations/webhooks-and-signatures/` — receiving the `ORDER_*` event after the SDK completes.
-- `api-references/order-status/` (Phase 1B-HC) — reconcile final state via `GET /orders/{order_id}`.
-- `api-references/refund-order/` (Phase 1B-HC) — refund the order if/when needed.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — the full backend sequence that calls this API.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes across endpoints.
+- `api-references/create-customer/` — call before this for logged-in flows that need saved-PM scoping.
+- `api-references/order-status/` — reconcile final state via `GET /orders/{order_id}`.
+- `api-references/refund-order/` — refund the order if/when needed.
+- `integrations/hyper-checkout/` — the full backend sequence that calls this API.

@@ -17,6 +17,8 @@ The alternatives — Express Checkout SDK (merchant hosts UI, Juspay's SDK handl
 
 - `foundations/authentication/` — KeyAuth scheme.
 - `foundations/webhooks-and-signatures/` — outbound webhook auth, retry semantics, event taxonomy.
+- `foundations/order-status-actions/` — the `status → action` decision table used in Step 6.
+- `foundations/error-codes/` — error-response catalogue.
 - `api-references/session/` — `POST /session` payload and response.
 - `api-references/order-status/` — `GET /orders/{order_id}` payload and status enum.
 - `api-references/refund-order/` — `POST /orders/{order_id}/refunds`.
@@ -108,17 +110,13 @@ For the full response schema and the status enum, see `api-references/order-stat
 
 ### Step 6 — Act on the final status
 
-Map the order-status response to merchant-side behaviour:
+The `status → action` mapping is generic across all Juspay integrations (HyperCheckout, ECSDK, ECB) — it lives in `foundations/order-status-actions/`. Read the response's `status` field, look up the action there, and proceed. The most-common terminal cases:
 
-| `status`                                                                       | Merchant action                                                                                                                                                                             |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CHARGED`                                                                      | Terminal success. Fulfill the order. Persist `txn_id`, `txn_uuid`, and `epg_txn_id` (from `txn_detail` / `payment_gateway_response`) for downstream gateway reconciliation.                 |
-| `PENDING_VBV`, `AUTHORIZING`                                                   | Not terminal. Re-poll after a short delay (5–30 s) or wait for the next webhook. Do not fulfill.                                                                                            |
-| `AUTHORIZED`                                                                   | For pre-auth flows (Phase 2), capture is the next step. Phase 1 HyperCheckout merchants typically don't use pre-auth.                                                                       |
-| `AUTHORIZATION_FAILED`, `AUTHENTICATION_FAILED`, `JUSPAY_DECLINED`, `DECLINED` | Terminal failure. Mark failed; offer retry UX.                                                                                                                                              |
-| `AUTO_REFUNDED`                                                                | Juspay refunded the customer automatically (conflict resolution). Notify the customer; do not fulfill.                                                                                      |
-| `TO_BE_CHARGED`                                                                | Action required on the merchant side: Juspay has validated the order, now the merchant must initiate the charge transaction.                                                                |
-| Anything else (`MERCHANT_VOIDED`, `CAPTURE_FAILED`, `ERROR`, …)                | Terminal-uncertain. Do not assume success or failure; re-poll `GET /orders/{order_id}` and/or escalate. See `api-references/order-status/` for the full enum and the unknown-status policy. |
+- `CHARGED` → fulfill.
+- `AUTHORIZATION_FAILED`, `AUTHENTICATION_FAILED`, `JUSPAY_DECLINED`, `DECLINED`, `AUTO_REFUNDED` → mark failed (with the right customer-facing message per case).
+- `PENDING_VBV`, `AUTHORIZING`, `NEW` → not terminal; re-poll or wait for the next webhook.
+
+For the full table covering all 23 status values and the catch-all unknown-status policy, see `foundations/order-status-actions/`. For the error catalogue when the API itself returns a 4xx/5xx, see `foundations/error-codes/`.
 
 ## Refunds (sub-sequence)
 
