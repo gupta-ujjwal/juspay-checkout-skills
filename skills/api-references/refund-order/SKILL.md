@@ -25,7 +25,7 @@ If you only need to read the current refund state of an order, call `GET /orders
 
 ## Endpoint
 
-```
+```http
 POST /orders/{order_id}/refunds
 ```
 

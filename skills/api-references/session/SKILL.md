@@ -18,7 +18,7 @@ You're implementing the HyperCheckout backend on the merchant server and need to
 
 ## Endpoint
 
-```
+```http
 POST /session
 ```
 

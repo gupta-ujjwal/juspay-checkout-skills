@@ -24,7 +24,7 @@ Do **not** trust the webhook body's `content.order` snapshot as final state — 
 
 ## Endpoint
 
-```
+```http
 GET /orders/{order_id}
 ```
 
