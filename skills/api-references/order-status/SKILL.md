@@ -113,26 +113,27 @@ The `status` enum has **23 values total**.
 
 ### Transaction details
 
-| Field                      | Type   | Notes                                                                            |
-| -------------------------- | ------ | -------------------------------------------------------------------------------- |
-| `txn_id`                   | string | Latest transaction's ID at the gateway.                                          |
-| `txn_uuid`                 | string | Juspay's UUID for the latest transaction.                                        |
-| `payment_method_type`      | enum   | `CARD`, `NB`, `WALLET`, `UPI`, `CONSUMER_FINANCE`.                               |
-| `payment_method`           | string | Specific method (e.g. `VISA`, `MASTERCARD`, `gpay`).                             |
-| `auth_type`                | string | `THREE_DS`, `OTP`, `VIES`.                                                       |
-| `gateway_id`               | int    | Internal gateway identifier.                                                     |
-| `gateway_reference_id`     | any    | Gateway-specific ref (string or int depending on gateway).                       |
-| `txn_detail`               | object | Full transaction detail; see `D.TxnDetail`.                                      |
-| `payment_gateway_response` | object | Gateway response (only populated with `options.add_full_gateway_response=true`). |
+| Field                      | Type   | Notes                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `txn_id`                   | string | Latest transaction's ID at Juspay.                                                                                                                                                                                                                                               |
+| `txn_uuid`                 | string | Juspay's UUID for the latest transaction.                                                                                                                                                                                                                                        |
+| `epg_txn_id`               | string | **Downstream payment gateway / acquirer's transaction ID.** Surfaced under `txn_detail.epg_txn_id` and `payment_gateway_response.epg_txn_id`. **Critical for merchant-side reconciliation** against gateway statements — this is the ID the gateway uses, not Juspay's `txn_id`. |
+| `payment_method_type`      | enum   | `CARD`, `NB`, `WALLET`, `UPI`, `CONSUMER_FINANCE`.                                                                                                                                                                                                                               |
+| `payment_method`           | string | Specific method (e.g. `VISA`, `MASTERCARD`, `gpay`).                                                                                                                                                                                                                             |
+| `auth_type`                | string | `THREE_DS`, `OTP`, `VIES`.                                                                                                                                                                                                                                                       |
+| `gateway_id`               | int    | Internal gateway identifier.                                                                                                                                                                                                                                                     |
+| `gateway_reference_id`     | any    | Gateway-specific ref (string or int depending on gateway).                                                                                                                                                                                                                       |
+| `txn_detail`               | object | Full transaction detail (nested object — also contains `epg_txn_id`).                                                                                                                                                                                                            |
+| `payment_gateway_response` | object | Gateway response (only fully populated with `options.add_full_gateway_response=true`). Always contains `epg_txn_id`.                                                                                                                                                             |
 
 ### Cards / UPI
 
-| Field               | Type   | Notes                                                                                                                                         |
-| ------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `card`              | object | Card details — `last_four_digits`, `card_brand`, `card_type`, `expiry_year`, `expiry_month`, `card_isin`, `using_saved_card`, etc. (`D.Card`) |
-| `payer_vpa`         | string | UPI VPA (when payment method is UPI).                                                                                                         |
-| `payer_app_name`    | string | UPI app used.                                                                                                                                 |
-| `upi.txn_flow_type` | string | `COLLECT` / `INTENT`.                                                                                                                         |
+| Field               | Type   | Notes                                                                                                                              |
+| ------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `card`              | object | Card details — `last_four_digits`, `card_brand`, `card_type`, `expiry_year`, `expiry_month`, `card_isin`, `using_saved_card`, etc. |
+| `payer_vpa`         | string | UPI VPA (when payment method is UPI).                                                                                              |
+| `payer_app_name`    | string | UPI app used.                                                                                                                      |
+| `upi.txn_flow_type` | string | `COLLECT` / `INTENT`.                                                                                                              |
 
 ### Refunds (per-refund records)
 
