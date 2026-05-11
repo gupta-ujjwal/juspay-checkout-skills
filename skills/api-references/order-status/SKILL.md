@@ -5,7 +5,7 @@ description: Fetch the authoritative state of a Juspay order — what the mercha
 
 # Order Status API — `GET /orders/{order_id}`
 
-The **authoritative** read of order state. Webhooks tell you _something happened_; this call tells you _what is true now_. The merchant backend should treat the `/orders/{order_id}` response as ground truth and not the webhook body — Juspay's architecture guarantees this is the source of record (`docs/framework.md` and `architecture.md` cited).
+The **authoritative** read of order state. Webhooks tell you _something happened_; this call tells you _what is true now_. The merchant backend should treat the `/orders/{order_id}` response as ground truth and not the webhook body — Juspay's architecture guarantees this is the source of record for order state.
 
 ## When to use
 
@@ -96,20 +96,20 @@ The `status` enum has **23 values total**.
 
 > **Subset shown below.** The 12 wire values an agent will commonly receive on a HyperCheckout integration. The other 11 (`AUTHORIZING`, `CAPTURE_FAILED`, `CAPTURE_INITIATED`, `CREATED`, `ERROR`, `MERCHANT_VOIDED`, `DECLINED`, `AUTO_VOIDED`, `VOID_FAILED`, `VOID_INITIATED`, `NOT_FOUND`) **will arrive in production** for gateway edge cases, pre-auth flows, and merchant-side voids. Treat any unknown status as terminal-uncertain: do not assume success or failure; call `GET /orders/{order_id}` again or escalate.
 
-| Wire value              | Meaning                                                                     |
-| ----------------------- | --------------------------------------------------------------------------- |
-| `NEW`                   | Order created, no payment attempt yet.                                      |
-| `PENDING_VBV`           | Payment in progress, awaiting customer authentication (3DS, etc.).          |
-| `AUTHORIZED`            | Payment authorised; for pre-auth flows, capture is the next step (Phase 2). |
-| `CHARGED`               | **Terminal success.** Funds captured. The merchant should fulfill.          |
-| `AUTHORIZATION_FAILED`  | Bank/issuer declined the authorisation.                                     |
-| `AUTHENTICATION_FAILED` | Customer failed 3DS / OTP / equivalent.                                     |
-| `JUSPAY_DECLINED`       | Juspay's risk engine declined the transaction.                              |
-| `PARTIAL_CHARGED`       | Partial capture (split-tender or pre-auth partial).                         |
-| `AUTO_REFUNDED`         | Juspay refunded the txn automatically (conflict resolution).                |
-| `VOIDED`                | Pre-auth voided (Phase 2 flow).                                             |
-| `COD_INITIATED`         | COD flow started; settlement happens out-of-band.                           |
-| `TO_BE_CHARGED`         | Mandate / scheduled flow (Phase 2).                                         |
+| Wire value              | Meaning                                                                                                                                       |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEW`                   | Order created, no payment attempt yet.                                                                                                        |
+| `PENDING_VBV`           | Payment in progress, awaiting customer authentication (3DS, etc.).                                                                            |
+| `AUTHORIZED`            | Payment authorised; for pre-auth flows, capture is the next step (Phase 2).                                                                   |
+| `CHARGED`               | **Terminal success.** Funds captured. The merchant should fulfill.                                                                            |
+| `AUTHORIZATION_FAILED`  | Bank/issuer declined the authorisation.                                                                                                       |
+| `AUTHENTICATION_FAILED` | Customer failed 3DS / OTP / equivalent.                                                                                                       |
+| `JUSPAY_DECLINED`       | Juspay's risk engine declined the transaction.                                                                                                |
+| `PARTIAL_CHARGED`       | Partial capture (split-tender or pre-auth partial).                                                                                           |
+| `AUTO_REFUNDED`         | Juspay refunded the txn automatically (conflict resolution).                                                                                  |
+| `VOIDED`                | Pre-auth voided (Phase 2 flow).                                                                                                               |
+| `COD_INITIATED`         | COD flow started; settlement happens out-of-band.                                                                                             |
+| `TO_BE_CHARGED`         | Basic transaction validation by Juspay complete; the merchant must now initiate the charge transaction. Action required on the merchant side. |
 
 ### Transaction details
 
