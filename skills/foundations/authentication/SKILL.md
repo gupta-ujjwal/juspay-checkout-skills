@@ -30,22 +30,7 @@ Authorization: Basic <base64(api_key + ":")>
 
 HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
 
-#### Route-level headers
-
-The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additionally require `x-merchantid`, and many require `x-routing-id`. Header requirements vary per route — **consult the api-reference card for the route you're calling**:
-
-- `api-references/session/` — requires `Authorization` + `x-merchantid` + `x-routing-id`.
-- `api-references/order-status/` — requires `Authorization` + `x-merchantid` + `x-routing-id`.
-- `api-references/refund-order/` — requires `Authorization` + `x-merchantid`. The refund route doesn't enforce `x-routing-id`.
-
-#### `version` header
-
-`version: YYYY-MM-DD` (a date string identifying the API version your integration was built against).
-
-- **Required** for new merchant integrations on KeyAuth-protected routes.
-- **Optional** for legacy integrations created before the header was introduced (the field is back-compat-tolerant; absence is accepted for those merchants but new integrations should always send it).
-
-Use today's date (or a fixed date you intend to pin) at integration time. Update it deliberately when you re-validate your integration against newer API behaviour.
+The three universal headers (`x-merchantid` + `x-routing-id` + `Content-Type`) are documented in `skills/SKILL.md` §"Common request headers" — they apply to **every** Juspay backend call regardless of auth scheme. The `Authorization` credential above is the KeyAuth-specific contribution; SignatureAuth and JWE replace it with their own credential carriage.
 
 ### TokenAuth — SDK-issued client tokens
 

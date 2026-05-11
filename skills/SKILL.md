@@ -17,11 +17,11 @@ This skill bank teaches a coding agent how to integrate Juspay's payment product
 
 Start with the **integration shape** the merchant has chosen, then follow links into API references and foundations as needed.
 
-| Integration                  | When to use                                                                                                | Skill                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| **HyperCheckout**            | Merchant wants Juspay to host the payment page; backend creates a session and the SDK opens the hosted UI. | `integrations/hyper-checkout/` _(Phase 1C-HC, not yet authored)_ |
-| **Express Checkout SDK**     | Merchant wants their own UI but Juspay's SDK to handle payment-method rendering and gateway calls.         | _Phase 2 — not yet in scope_                                     |
-| **Express Checkout Backend** | Pure server-to-server. No SDK on the merchant side; merchant orchestrates everything via API.              | _Phase 3 — not yet in scope_                                     |
+| Integration                  | When to use                                                                                                | Skill                          |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **HyperCheckout**            | Merchant wants Juspay to host the payment page; backend creates a session and the SDK opens the hosted UI. | `integrations/hyper-checkout/` |
+| **Express Checkout SDK**     | Merchant wants their own UI but Juspay's SDK to handle payment-method rendering and gateway calls.         | _Phase 2 — not yet in scope_   |
+| **Express Checkout Backend** | Pure server-to-server. No SDK on the merchant side; merchant orchestrates everything via API.              | _Phase 3 — not yet in scope_   |
 
 Every integration depends on:
 
@@ -41,6 +41,24 @@ The same hosts serve every Juspay API in this bank:
 
 Each api-reference card lists the path it owns (e.g. `POST /session`, `GET /orders/{order_id}`). Combine `<host>/<path>` to construct the full URL.
 
+## Common request headers
+
+Three headers are required on **every** Juspay backend call in this bank, regardless of auth scheme or route:
+
+```http
+x-merchantid: <merchant_id>
+x-routing-id: <customer_id_or_order_id>
+Content-Type: <per-route — JSON or x-www-form-urlencoded>
+```
+
+- `x-merchantid` — your merchant ID from the dashboard.
+- `x-routing-id` — typically the `customer_id`; fall back to `order_id` for guest checkout.
+- `Content-Type` — varies per route; each api-reference card lists the right value.
+
+The **auth credential** is a fourth required header (or set of fields), but its form differs per scheme — `Authorization: Basic ...` for KeyAuth, signature querystring fields for SignatureAuth, JWE wrapping for `/v4/*`. The auth-scheme mechanics live in `foundations/authentication/`; each api-reference card declares which scheme its route expects.
+
+Per-route additions (e.g. `version` on order-status) are documented in the api-reference card for that route.
+
 ## Layer contract
 
 ```text
@@ -50,15 +68,16 @@ integrations/   →  api-references/  →  foundations/
 
 Knowledge flows in one direction. An orchestrator never inlines payload schemas; an api-reference never re-states auth mechanics.
 
-## Status — Phase 1A + 1B-HC shipped; Phase 1C-HC next
+## Status — Phase 1 complete (HyperCheckout end-to-end)
 
 Currently authored:
 
 - `skills/SKILL.md` (this file)
-- `foundations/authentication/`, `foundations/webhooks-and-signatures/`
-- `api-references/session/`, `api-references/order-status/`, `api-references/refund-order/`
+- `foundations/{authentication, webhooks-and-signatures, order-status-actions, error-codes}/`
+- `api-references/{session, order-status, refund-order, create-customer, order-fulfillment}/`
+- `integrations/hyper-checkout/`
 
-Phase 1's vertical is **HyperCheckout end-to-end**: 1C-HC adds the orchestrator (`integrations/hyper-checkout/`) that sequences the three api-references above. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
+Phase 1 ships the HyperCheckout backend vertical as one complete integration. Express Checkout SDK is Phase 2; Express Checkout Backend is Phase 3. See [`README.md`](../README.md) §Status.
 
 ## Phase 1 omissions
 

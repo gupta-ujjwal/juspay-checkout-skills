@@ -34,15 +34,15 @@ JWE variant (`GET /v4/order-status`) for merchants on encrypted endpoints — ga
 
 ## Authentication
 
-KeyAuth, with two additional required headers:
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: application/json`. The three universal headers are required as documented in `skills/SKILL.md` §"Common request headers" — `x-routing-id` should match what the order/session was created with (typically the `customer_id`; falls back to `order_id` for guest).
+
+One route-specific additional header:
 
 ```http
-Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-x-routing-id: <customer_id_or_order_id>
+version: YYYY-MM-DD
 ```
 
-`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout. `version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
+`version` identifies which API-response contract you built the integration against. **Set it to the date you wrote the integration (e.g. `2026-05-11`) and treat it as a static string.** Update it only when you deliberately re-validate the integration against newer API behaviour. Order-status is the one route in this bank where the `version` value actually shapes the response, so omitting it or pointing it at a moving target risks getting an unexpected response shape one day.
 
 ## Query parameters
 
@@ -196,6 +196,8 @@ The response `status` field tells you what to do next:
 
 - `foundations/authentication/` — auth scheme.
 - `foundations/webhooks-and-signatures/` — receive event hints; reconcile via this card.
+- `foundations/order-status-actions/` — the `status → action` decision table for interpreting the response.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes.
 - `api-references/session/` — creates the `order_id` you query here.
 - `api-references/refund-order/` — refund operations are reflected back into the `refunds[]` array of this response.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — orchestrator that sequences this call after webhooks.
+- `integrations/hyper-checkout/` — orchestrator that sequences this call after webhooks / handover.

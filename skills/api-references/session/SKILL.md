@@ -26,16 +26,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs". JWE variant (`POST /v4/
 
 ## Authentication
 
-KeyAuth, with two additional required headers:
-
-```http
-Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-x-routing-id: <customer_id_or_order_id>
-Content-Type: application/json
-```
-
-`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>` (see `foundations/authentication/` §KeyAuth for the credential format). `Content-Type: application/json`. The three universal headers (`x-merchantid` + `x-routing-id` + `Content-Type`) are required as documented in `skills/SKILL.md` §"Common request headers".
 
 ## Request body
 
@@ -43,24 +34,24 @@ Content-Type: application/json
 
 ### Required fields
 
-| Field                    | Type                | Notes                                                                                                   |
-| ------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------- |
-| `order_id`               | string              | Merchant's unique order ID. Alphanumeric, ≤ 21 characters.                                              |
-| `amount`                 | stringified decimal | Two decimal places, e.g. `"100.00"`. Rejection on absence: `"Mandatory fields are missing"`.            |
-| `payment_page_client_id` | string              | Juspay-issued client ID for the merchant's payment page. Rejection: `PAYMENT_PAGE_CLIENT_ID_NOT_FOUND`. |
+| Field                    | Type                | Notes                                                                                                                                                |
+| ------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `order_id`               | string              | Merchant's unique order ID. Alphanumeric, ≤ 21 characters.                                                                                           |
+| `amount`                 | stringified decimal | Two decimal places, e.g. `"100.00"`. Rejection on absence: `"Mandatory fields are missing"`.                                                         |
+| `currency`               | string              | Three-letter currency code (e.g. `INR`, `SGD`, `MYR`). The handler accepts `INR` as a default if absent — set this explicitly to avoid that footgun. |
+| `payment_page_client_id` | string              | Juspay-issued client ID for the merchant's payment page. Rejection: `PAYMENT_PAGE_CLIENT_ID_NOT_FOUND`.                                              |
 
 ### Conditionally required
 
-| Field         | Required when                                                                     | Notes                                                                                                                               |
-| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `customer_id` | `action="paymentManagement"`, **or** the request enables a mandate flow (Phase 2) | Rejection: `CUSTOMER_ID_NOT_FOUND`. For regular `paymentPage` checkouts without mandates, the field is optional and can be omitted. |
+| Field         | Required when                                                                                                                                                                                                                                                                                                                                             | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customer_id` | Any flow that needs a Juspay customer record — **tokenization / saved cards**, **linked-wallet flows**, **subscriptions / mandates** (Phase 2), or **cross-session analytics** (FRM, 3DS step-up history scoped by customer). Also when `action="paymentManagement"` (rejects with `CUSTOMER_ID_NOT_FOUND` otherwise) and on any mandate-bearing request. | Pass **the merchant's own customer ID** — the same value used as `{merchantCustomerId}` on `POST /v2/customers/{merchantCustomerId}` (see `api-references/create-customer/`). Juspay resolves this against the customer record's `object_reference_id` internally — you do not need to know or send Juspay's internal `cst_*` ID. **For pure guest checkouts** that don't need any of the above capabilities, omit `customer_id` entirely; the hosted page treats the payment as anonymous and analytics are unscoped. |
 
 ### Optional fields
 
 | Field                                  | Type   | Notes                                                                                                                               |
 | -------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `action`                               | string | `"paymentPage"` (default) or `"paymentManagement"` (manage payment methods).                                                        |
-| `currency`                             | string | Three-letter currency code (e.g. `SGD`, `INR`). **Defaults to `"INR"` if omitted** — set explicitly for non-IN markets.             |
 | `return_url`                           | string | Fully qualified URL the customer is redirected to after payment. Omit and the SDK returns control to the merchant frontend instead. |
 | `customer_email`                       | string | Customer email. Useful for receipts and risk scoring but not required.                                                              |
 | `customer_phone`                       | string | Customer phone (no country-code prefix).                                                                                            |
@@ -197,6 +188,8 @@ The merchant's server forwards the entire `sdk_payload` field of the response to
 
 - `foundations/authentication/` — auth scheme details.
 - `foundations/webhooks-and-signatures/` — receiving the `ORDER_*` event after the SDK completes.
-- `api-references/order-status/` (Phase 1B-HC) — reconcile final state via `GET /orders/{order_id}`.
-- `api-references/refund-order/` (Phase 1B-HC) — refund the order if/when needed.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — the full backend sequence that calls this API.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes across endpoints.
+- `api-references/create-customer/` — call before this for logged-in flows that need saved-PM scoping.
+- `api-references/order-status/` — reconcile final state via `GET /orders/{order_id}`.
+- `api-references/refund-order/` — refund the order if/when needed.
+- `integrations/hyper-checkout/` — the full backend sequence that calls this API.

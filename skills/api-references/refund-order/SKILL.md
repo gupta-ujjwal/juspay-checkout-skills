@@ -33,15 +33,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs".
 
 ## Authentication
 
-KeyAuth, with one additional required header — note that unlike session/order-status, the refund route does **not** require `x-routing-id`:
-
-```http
-Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-Content-Type: application/x-www-form-urlencoded
-```
-
-`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: application/x-www-form-urlencoded`. The three universal headers are required as documented in `skills/SKILL.md` §"Common request headers" — including `x-routing-id`. (The refund route requires the same header set as every other Juspay API.)
 
 ## Request body
 
@@ -147,6 +139,7 @@ Don't retry network failures with a fresh `unique_request_id` — the original m
 
 - `foundations/authentication/` — auth scheme.
 - `foundations/webhooks-and-signatures/` — `REFUND_SUCCEEDED` / `REFUND_FAILED` events fire after async settlement.
+- `foundations/error-codes/` — full catalogue of 4xx/5xx codes, including all refund-specific ones.
 - `api-references/order-status/` — full schema of the response object; the canonical state read.
 - `api-references/session/` — creates the order this refunds against.
-- `integrations/hyper-checkout/` (Phase 1C-HC, not yet authored) — orchestrator that calls this card.
+- `integrations/hyper-checkout/` — orchestrator that calls this card.
