@@ -9,8 +9,9 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 **Where we are** — Phase 1 narrowed to **HyperCheckout end-to-end**. Express Checkout SDK and Express Checkout Backend become Phase 2 and Phase 3 respectively.
 
 - **1A (spine) — shipped** in PR #7 (commit `43323e1` on main): `skills/SKILL.md`, `skills/foundations/authentication/SKILL.md`, `skills/foundations/webhooks-and-signatures/SKILL.md`.
-- **1B-HC (api-references HyperCheckout calls) — next**: `api-references/{session, order-status, refund-order}/`. Each declares its own auth scheme and required headers; the foundation no longer needs a route-to-scheme table (closes #6).
-- **1C-HC (orchestrator) — after 1B-HC**: `integrations/hyper-checkout/`. The "reconcile via order-status" pattern moves here from the webhooks foundation (closes #5).
+- **PR-A scope-narrow + ref-data corrections — shipped** in PR #10 (commit `e5d68df` on main): closed #3.
+- **1B-HC (api-references HyperCheckout calls) — shipped** in this PR: `api-references/{session, order-status, refund-order}/`. Each declares its own auth scheme and required headers; foundation auth card shrunk to scheme-proper (closes #6 and #9). Reference-data correction landed inline: `enabledInstantRefund` raises **400** (not 403) from `Refund/Validation.hs:1072` (not `Decider.hs`).
+- **1C-HC (orchestrator) — next**: `integrations/hyper-checkout/`. The "reconcile via order-status" pattern moves here from the webhooks foundation (closes #5).
 
 **Bank scope is backend-only** — server-to-server APIs and the response payload that the merchant's backend hands to its frontend SDK. SDK rendering, iframe handling, and per-platform initialisation are out of scope (future separate bank).
 

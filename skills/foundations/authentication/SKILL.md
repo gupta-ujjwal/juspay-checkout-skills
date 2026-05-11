@@ -16,59 +16,36 @@ Read this card whenever you're constructing a Juspay HTTP request and you don't 
 - An active Juspay merchant account with API credentials provisioned via the dashboard.
 - For TokenAuth-backed flows, the merchant's frontend will receive a short-lived `client_auth_token` from Juspay; the backend doesn't generate this token directly.
 
-## Public base URLs
-
-| Environment | Host                        |
-| ----------- | --------------------------- |
-| Sandbox     | `https://sandbox.juspay.in` |
-| Production  | `https://api.juspay.in`     |
-
-The internal Servant routes in `euler-workspace-5/` carry an `/ecr` prefix — the edge proxy strips it. Always use the public path in skill cards and integration code.
-
 ## The three schemes (Phase 1)
 
 ### KeyAuth — server-to-server merchant API
 
-The default scheme for backend-only calls (`POST /orders`, `POST /session`, `POST /txns`, refunds, order-status, customer APIs, etc.).
+The default scheme for backend-only calls (HyperCheckout's `POST /session`, `GET /orders/{order_id}`, refunds, customer APIs, etc.).
 
-#### Headers
+#### Auth credential
 
 ```http
 Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-x-routing-id: <customer_id_or_order_id>
 ```
 
-Three headers, all required on most KeyAuth-protected endpoints:
+HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
 
-- **`Authorization`** — HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
-- **`x-merchantid`** — your merchant ID from the dashboard. Required at the route handler layer (constructs `XMerchantId` for downstream context, e.g. `euler-api-order/src/Euler/Server.hs:6714`).
-- **`x-routing-id`** — typically the customer ID; falls back to order ID for guest checkout. Enforced by the `withXRoutingId` middleware (`Server.hs:339`); used for routing/consistency across services.
+#### Route-level headers
 
-The auth scheme proper reads only `Authorization` (see verification path below); `x-merchantid` and `x-routing-id` are route-level requirements layered on top. The auth check passes when only `Authorization` is sent, but downstream handlers and middleware reject the request without the other two. Both IN and SEA public docs uniformly require all three.
+The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additionally require `x-merchantid`, and many require `x-routing-id`. Header requirements vary per route — **consult the api-reference card for the route you're calling**:
 
-#### Verification path
+- `api-references/session/` — requires `Authorization` + `x-merchantid` + `x-routing-id`.
+- `api-references/order-status/` — requires `Authorization` + `x-merchantid` + `x-routing-id`.
+- `api-references/refund-order/` — requires `Authorization` + `x-merchantid`. The refund route doesn't enforce `x-routing-id`.
 
-- Authorization header parsed at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`.
-- API key extracted by stripping the `Basic` prefix and base64-decoding, then taking everything before the first `:` — see `extractApiKey` at `AuthKeyService.hs:93-94`.
-- Merchant account looked up by API key at `AuthKeyService.hs:71` (`fetchMerchantAccountRecordUsingApiKey`).
-- `x-routing-id` middleware enforced at `euler-api-order/src/Euler/Server.hs:339` (`withXRoutingId`).
+#### `version` header
 
-#### Worked example (sandbox)
+`version: YYYY-MM-DD` (a date string identifying the API version your integration was built against).
 
-```bash
-API_KEY="your_sandbox_api_key"
-MERCHANT_ID="your_merchant_id"
-CUSTOMER_ID="cust_001"
-AUTH=$(printf '%s:' "$API_KEY" | base64)
+- **Required** for new merchant integrations on KeyAuth-protected routes.
+- **Optional** for legacy integrations created before the header was introduced (the field is back-compat-tolerant; absence is accepted for those merchants but new integrations should always send it).
 
-curl -sSL -X POST "https://sandbox.juspay.in/session" \
-  -H "Authorization: Basic $AUTH" \
-  -H "x-merchantid: $MERCHANT_ID" \
-  -H "x-routing-id: $CUSTOMER_ID" \
-  -H "Content-Type: application/json" \
-  -d '{"order_id":"ord_001","amount":"100.00","customer_id":"cust_001","action":"paymentPage"}'
-```
+Use today's date (or a fixed date you intend to pin) at integration time. Update it deliberately when you re-validate your integration against newer API behaviour.
 
 ### TokenAuth — SDK-issued client tokens
 
@@ -76,21 +53,16 @@ Used for client-side calls the SDK makes after the backend has handed over a ses
 
 #### Lifetime
 
-- 15 minutes from issue. Configured at `euler-webservice/src/Euler/WebService/Config/Config.hs:1131` (`orderTokenExpiry = 900` seconds).
+- 15 minutes from issue (900 seconds).
 - After expiry, the SDK must re-fetch a fresh token via the merchant backend.
 
 #### Field
 
-The token is delivered to the SDK in the response body (commonly `juspay.client_auth_token` inside the order response, or as `payload.client_auth_token` in the session response).
+The token is delivered to the SDK in the response body (commonly `juspay.client_auth_token` inside the order response, or `payload.clientAuthToken` inside `sdk_payload` of the session response).
 
 #### Backend responsibility
 
 Pass the token through to the frontend in the response your server sends back. Don't strip it, don't cache it server-side, don't reuse it across customers. The token is single-session.
-
-#### Verification path
-
-- Token-bearing body type at `euler-api-pre-txn/src/Euler/Servant/Auth/TokenAuth.hs:35` (`client_auth_token :: RP.ClientAuthToken`).
-- Validated at `TokenAuth.hs:49-68` (instance `Authenticate TokenAuth`).
 
 ### SignatureAuth — RSA-signed requests
 
@@ -98,7 +70,7 @@ Used on `POST /v2/orders` and other signed-body endpoints. The merchant signs th
 
 #### Algorithm
 
-RSA with PKCS#1 v1.5 padding. Verification at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthSignatureService.hs:195-202` (`verifyRSASignaturePKCS15`).
+RSA with PKCS#1 v1.5 padding over SHA-256.
 
 #### Required parameters (querystring or form-encoded body)
 
@@ -107,8 +79,6 @@ RSA with PKCS#1 v1.5 padding. Verification at `euler-webservice/src/Euler/WebSer
 | `signature`         | Base64-encoded RSA-PKCS#1.5 signature over `signature_payload`.        |
 | `signature_payload` | The string that was signed (typically the canonicalised request body). |
 | `merchant_key_id`   | Identifier for the merchant's uploaded public key.                     |
-
-Field type at `euler-api-pre-txn/src/Euler/Servant/Auth/SignatureAuth.hs:24-37`. Public-key lookup at `AuthSignatureService.hs:180-189`.
 
 #### Worked example
 
@@ -127,7 +97,7 @@ sig_b64 = base64.b64encode(signature).decode()
 
 ## Choosing a scheme
 
-Each api-reference card declares the scheme its endpoint expects (Phase 1B-HC: `session/`, `order-status/`, `refund-order/`). The defaults across Phase 1:
+Each api-reference card declares the scheme its endpoint expects. Defaults:
 
 - **KeyAuth** — server-to-server merchant-API calls (HyperCheckout's `POST /session`, `GET /orders/{order_id}`, refunds).
 - **SignatureAuth** — `POST /v2/orders` and other RSA-signed-body endpoints.
@@ -135,25 +105,25 @@ Each api-reference card declares the scheme its endpoint expects (Phase 1B-HC: `
 
 ## Common errors
 
-| Symptom                                       | Likely cause                                                                                         | Fix                                                                                                          |
-| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `401 Unauthorized` on every request           | API key not base64-encoded with trailing `:` (the colon-empty-password is mandatory for HTTP Basic). | Encode `printf '%s:' "$API_KEY" \| base64`, not just `base64 <<< "$API_KEY"`.                                |
-| `400 Bad Request` despite valid Authorization | Missing `x-merchantid` or `x-routing-id` header. The auth scheme passes; the route handler rejects.  | Always send all three headers (`Authorization`, `x-merchantid`, `x-routing-id`) on KeyAuth-protected routes. |
-| `401` only on some routes                     | Mixing schemes — sending KeyAuth where SignatureAuth is required (or vice-versa).                    | Look up the route in its api-reference card and match the scheme.                                            |
-| TokenAuth call returns `Token expired`        | Token older than 15 minutes.                                                                         | Backend issues a fresh token via `/session`; tokens are not refreshable.                                     |
-| Signature verification fails on `/v2/orders`  | `signature_payload` doesn't match the bytes that were signed (encoding/whitespace difference).       | Sign the exact byte string you transmit; do not re-canonicalise after signing.                               |
+| Symptom                                       | Likely cause                                                                                         | Fix                                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `401 Unauthorized` on every request           | API key not base64-encoded with trailing `:` (the colon-empty-password is mandatory for HTTP Basic). | Encode `printf '%s:' "$API_KEY" \| base64`, not just `base64 <<< "$API_KEY"`.        |
+| `400 Bad Request` despite valid Authorization | Missing `x-merchantid` or `x-routing-id`. The auth scheme passes; the route handler rejects.         | Check the api-reference card for the route — header requirements are declared there. |
+| `401` only on some routes                     | Mixing schemes — sending KeyAuth where SignatureAuth is required (or vice-versa).                    | Look up the route in its api-reference card and match the scheme.                    |
+| TokenAuth call returns `Token expired`        | Token older than 15 minutes.                                                                         | Backend issues a fresh token via `/session`; tokens are not refreshable.             |
+| Signature verification fails on `/v2/orders`  | `signature_payload` doesn't match the bytes that were signed (encoding/whitespace difference).       | Sign the exact byte string you transmit; do not re-canonicalise after signing.       |
 
 ## Out of scope for Phase 1
 
 Two additional schemes exist in the source but are deferred:
 
-- **JWEAuth** — encrypted bodies on `/v4/*` endpoints. Requires `basiliskKeyId` and `encryptionKeyIds` to be configured on the `MerchantAccount` (silent-gated; off by default). Decryption logic at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/JwtAuth.hs:196-212`.
-- **CreditKeyAuth** — credit-line merchants only. Reads `Authorization` like KeyAuth plus an explicit `X-Merchant-Id` header, then validates against a Redis whitelist. Path at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthCreditKeyService.hs:34-74`.
+- **JWEAuth** — encrypted bodies on `/v4/*` endpoints. Requires merchant-account encryption keys (`basiliskKeyId`, `encryptionKeyIds`) to be configured; silent-gated, off by default.
+- **CreditKeyAuth** — credit-line merchants only. Behaves like KeyAuth plus an explicit `X-Merchant-Id` header, validated against an allow-list.
 
 Both will be documented in Phase 2 once merchant-enablement gates land — see [`README.md`](../../../README.md) §"Phase 1 omissions".
 
 ## Related skills
 
 - `foundations/webhooks-and-signatures/` — what to do with the events Juspay sends back to your server.
-- `api-references/order-create/`, `session/`, `txns/`, `create-customer/` (Phase 1B) — per-API payload shapes; each declares the scheme it expects.
+- `api-references/session/`, `order-status/`, `refund-order/` (Phase 1B-HC) — per-API payload shapes; each declares the scheme and headers it expects.
 - Bank entry point: `skills/SKILL.md`.

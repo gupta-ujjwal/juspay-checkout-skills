@@ -63,7 +63,7 @@ Treat `content.order` as a snapshot at event time, not as the current state. For
 
 ## Event taxonomy
 
-The canonical event names are defined at `euler-api-adapter/src/Adapter/API/Webhook/Types.hs:21-43`:
+The canonical event names:
 
 **Order lifecycle**
 `ORDER_CREATED`, `ORDER_UPDATED`, `ORDER_SUCCEEDED`, `ORDER_FAILED`, `ORDER_AUTHORIZED`, `ORDER_PARTIAL_CHARGED`, `ORDER_VOIDED`, `ORDER_VOID_FAILED`, `ORDER_CAPTURE_FAILED`, `ORDER_COD_INITIATED`, `ORDER_TO_BE_CHARGED`
@@ -83,14 +83,14 @@ Juspay's architecture treats the order-status API as the **authoritative source 
 The recommended pattern:
 
 1. Receive the webhook, verify Basic Auth, persist the event, return `200`.
-2. Asynchronously, call `GET /orders/{order_id}` (KeyAuth + `x-merchantid` + `x-routing-id`) and treat that response as ground truth. The path-parameter form is the canonical merchant-facing route (`euler-api-order/src/Euler/Server.hs:2540`, `OrderStatusUrlCapture`); see `api-references/order-status/` (Phase 1B-HC) for the full schema.
+2. Asynchronously, call `GET /orders/{order_id}` (KeyAuth + `x-merchantid` + `x-routing-id`) and treat that response as ground truth. See `api-references/order-status/` for the full schema.
 3. Update your local order state from the order-status response, not from the webhook body.
 
 This pattern is robust to redelivery, ordering, and missed events.
 
 ## Signature verification — deferred to Phase 2
 
-Juspay can additionally HMAC-sign webhook deliveries (and return-URL redirects) using the merchant's `paymentResponseHashKey`. The capability is **silent-gated** by `MerchantAccount.enablePaymentResponseHash` (`euler-db/src/Euler/DB/Storage/Types/MerchantAccount.hs:159-160`): when the gate is off, callbacks arrive unsigned; when it's on, an HMAC-SHA256 signature is attached.
+Juspay can additionally HMAC-sign return-URL redirects (and possibly webhook bodies — see "Phase 1 omissions" in the bank README) using the merchant's response-hash key. The capability is **silent-gated** by an account-level `enablePaymentResponseHash` flag: when the gate is off, callbacks arrive unsigned; when it's on, an HMAC-SHA256 signature is attached.
 
 Because the gate fails silently — a merchant whose gate is off will see "verification works" while actually receiving zero verification — Phase 1 deliberately does not document the verification mechanics. Doing so would imply the verification is unconditionally available, which it isn't.
 

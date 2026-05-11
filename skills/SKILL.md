@@ -30,6 +30,17 @@ Every integration depends on:
 
 API references (Phase 1B-HC: `api-references/{session, order-status, refund-order}/`) own the payload shapes; integrations link to them rather than re-document.
 
+## Base URLs
+
+The same hosts serve every Juspay API in this bank:
+
+| Environment | Host                        |
+| ----------- | --------------------------- |
+| Sandbox     | `https://sandbox.juspay.in` |
+| Production  | `https://api.juspay.in`     |
+
+Each api-reference card lists the path it owns (e.g. `POST /session`, `GET /orders/{order_id}`). Combine `<host>/<path>` to construct the full URL.
+
 ## Layer contract
 
 ```text
@@ -39,20 +50,20 @@ integrations/   →  api-references/  →  foundations/
 
 Knowledge flows in one direction. An orchestrator never inlines payload schemas; an api-reference never re-states auth mechanics.
 
-## Status — Phase 1A spine shipped; Phase 1B-HC next
+## Status — Phase 1A + 1B-HC shipped; Phase 1C-HC next
 
 Currently authored:
 
 - `skills/SKILL.md` (this file)
-- `foundations/authentication/`
-- `foundations/webhooks-and-signatures/`
+- `foundations/authentication/`, `foundations/webhooks-and-signatures/`
+- `api-references/session/`, `api-references/order-status/`, `api-references/refund-order/`
 
-Phase 1's vertical is **HyperCheckout end-to-end**: 1B-HC adds the three api-references HyperCheckout calls (`session`, `order-status`, `refund-order`); 1C-HC adds the orchestrator. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
+Phase 1's vertical is **HyperCheckout end-to-end**: 1C-HC adds the orchestrator (`integrations/hyper-checkout/`) that sequences the three api-references above. Express Checkout SDK and Express Checkout Backend are Phase 2 and Phase 3 respectively. See [`README.md`](../README.md) §Status.
 
 ## Phase 1 omissions
 
 Phase 1 cards deliberately exclude flows whose behaviour depends on a merchant-enablement gate that fails silently (the merchant integrates against the skill, the call appears to succeed, the capability quietly does nothing). The exclusion list lives in [`README.md`](../README.md) §"Phase 1 omissions". If a flow you need isn't in the bank, check there before assuming the bank is incomplete.
 
-## Source-of-truth discipline
+## Accuracy
 
-Every claim in every card is grounded in the Juspay Euler source code (`euler-workspace-5/`). When the public docs at `juspay.io/sea/docs/` and the source disagree, **code wins**. Cards cite `file:line` — agents and reviewers can verify each claim against the implementation.
+Cards in this bank are verified against Juspay's actual API behaviour at authoring time, not just the public-doc prose. Where doc and behaviour disagree, behaviour wins.
