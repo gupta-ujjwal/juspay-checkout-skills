@@ -15,11 +15,12 @@ The alternatives — Express Checkout SDK (merchant hosts UI, Juspay's SDK handl
 
 ## Prerequisites
 
-- `foundations/authentication/` — KeyAuth scheme and route-level headers.
+- `foundations/authentication/` — KeyAuth scheme.
 - `foundations/webhooks-and-signatures/` — outbound webhook auth, retry semantics, event taxonomy.
 - `api-references/session/` — `POST /session` payload and response.
 - `api-references/order-status/` — `GET /orders/{order_id}` payload and status enum.
 - `api-references/refund-order/` — `POST /orders/{order_id}/refunds`.
+- `api-references/create-customer/` — `POST /v2/customers/{merchantCustomerId}` (logged-in flows only).
 - An active Juspay merchant account with `payment_page_client_id` provisioned.
 - A publicly reachable HTTPS endpoint registered as the merchant's webhook URL.
 
@@ -40,23 +41,29 @@ Steps 1–3 are the outbound flow; steps 5–8 are the reconciliation loop. The 
 
 ## Backend sequence
 
-Six steps. Steps 1–3 are the outbound flow; steps 4–6 are the reconciliation loop.
+Outbound flow plus reconciliation loop. Step 0 only applies to **logged-in customer flows**; guest checkouts skip straight to Step 1.
+
+### Step 0 — Create-or-fetch the customer (logged-in flows only)
+
+If the customer is logged into the merchant's app and you want them to see / use **saved payment methods** (saved cards, saved wallets), call `POST /v2/customers/{merchantCustomerId}` first. Pass the merchant's stable customer ID as the path parameter; Juspay creates the record on first call and returns the existing one on repeats. Persist the returned `id` (Juspay's `cst_*`) alongside your own customer record so the relationship is recoverable.
+
+Skip this step entirely for **guest checkouts** — there's no customer record to associate with, and `POST /session` runs without `customer_id`.
+
+Payload + response details: `api-references/create-customer/`.
 
 ### Step 1 — Collect order details
 
 Server-side, gather what `POST /session` needs:
 
 - The merchant's `order_id` (your idempotency key — see "Idempotency" below).
-- `amount` (stringified decimal, two places).
+- `amount` (stringified decimal, two places) and `currency` (three-letter code — set explicitly, don't rely on the INR default).
 - `payment_page_client_id` from the dashboard.
-- `customer_id` if you're doing payment-management or mandates; otherwise optional.
-- Everything else (`customer_email`, `customer_phone`, `currency`, `return_url`, `udf*`, etc.) is optional but useful — see `api-references/session/` §"Request body" for the full field-by-field requirement and default rules.
+- `customer_id` **only if** Step 0 happened — i.e. logged-in flows that want saved-PM scoping. Guest checkouts omit it.
+- Everything else (`customer_email`, `customer_phone`, `return_url`, `udf*`, etc.) is optional — see `api-references/session/` §"Request body" for the full requirement table.
 
 ### Step 2 — Call `POST /session`
 
-Send the JSON request with KeyAuth + `x-merchantid` + `x-routing-id` (typically the `customer_id`; the order ID for guest checkout) + `version: YYYY-MM-DD`.
-
-The response carries `sdk_payload`, `payment_links`, `order_expiry`. Persist `id` (Juspay's internal `ordeh_*`), `order_id`, and `order_expiry` on the merchant side — you'll need them in steps 4–6. The session call creates the underlying order; **there is no separate `POST /orders` step** for HyperCheckout.
+Send the JSON request with the standard KeyAuth header set (see `skills/SKILL.md` §"Common request headers"). The response carries `sdk_payload`, `payment_links`, `order_expiry`. Persist `id` (Juspay's internal `ordeh_*`), `order_id`, and `order_expiry` on the merchant side — you'll need them in the reconciliation loop. The session call creates the underlying order; **there is no separate `POST /orders` step** for HyperCheckout.
 
 Payload + response field details: `api-references/session/`.
 
