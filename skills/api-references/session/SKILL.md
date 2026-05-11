@@ -23,7 +23,7 @@ You're implementing the HyperCheckout backend on the merchant server and need to
 | Sandbox     | `POST https://sandbox.juspay.in/session` |
 | Production  | `POST https://api.juspay.in/session`     |
 
-JWE variant (`POST /v4/session`) exists for merchants on encrypted endpoints — gated by `MerchantAccount.basiliskKeyId`, deferred to Phase 2 (see [`README.md`](../../../README.md) §"Phase 1 omissions").
+JWE variant (`POST /v4/session`) exists for merchants on encrypted endpoints — gated by account-level encryption keys (`basiliskKeyId`), deferred to Phase 2 (see [`README.md`](../../../README.md) §"Phase 1 omissions").
 
 ## Authentication
 
@@ -36,11 +36,11 @@ x-routing-id: <customer_id_or_order_id>
 Content-Type: application/json
 ```
 
-Auth scheme parsed at `euler-webservice/src/Euler/WebService/Services/AuthService/Auth/AuthKeyService.hs:46-71`; route auth annotation at `euler-api-order/src/Euler/Server.hs:1975` (`'[ESA.JuspayAuth '[Auth.KeyAuth]]`). `x-routing-id` middleware enforced at `Server.hs:339` (`withXRoutingId`). The optional `version` header is documented in `foundations/authentication/`.
+`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
 
 ## Request body
 
-`POST /session` accepts JSON. The handler implementation lives at `euler-api-order/src/Euler/Product/OLTP/Order/FetchSessionImpl.hs`; the order create-or-link logic at `FetchSessionImpl.hs:215-232` reads `order_id` from the body and either links to an existing order or creates a new one via `runOrderCreateUpdate`.
+`POST /session` accepts JSON. The session call creates the order under the hood: pass `order_id` in the body and it's linked to a new order with the same details. There is no separate `POST /orders` call required before `/session` for the HyperCheckout flow.
 
 ### Required fields
 
@@ -68,11 +68,11 @@ Auth scheme parsed at `euler-webservice/src/Euler/WebService/Services/AuthServic
 
 ### Out of scope for Phase 1
 
-Mandate fields (`options.create_mandate`, `mandate.max_amount`, `mandate.start_date`, etc.) are accepted by the handler but the mandate flow itself is silent-gated by `MerchantAccount.mandateConfig`. Phase 2.
+Mandate fields (`options.create_mandate`, `mandate.max_amount`, `mandate.start_date`, etc.) are accepted on the request but the mandate flow itself is silent-gated by per-gateway mandate config on the merchant account. Phase 2.
 
 ## Response
 
-`SessionAPIResponse` at `euler-api-order/src/Euler/Product/OLTP/Order/FetchSessionAPI.hs:63-74`. All fields nullable; the merchant backend should treat the absence of `sdk_payload` or `payment_links` as a request-construction error.
+All response fields are nullable; the merchant backend should treat the absence of `sdk_payload` or `payment_links` as a request-construction error.
 
 ```json
 {
@@ -121,22 +121,22 @@ Mandate fields (`options.create_mandate`, `mandate.max_amount`, `mandate.start_d
 
 ### `sdk_payload` shape
 
-`SessionSDKPayload` at `FetchSessionAPI.hs:46-52`. The merchant backend forwards the full object to the frontend; the SDK expects every field as transmitted.
+The merchant backend forwards the full `sdk_payload` object to the frontend; the SDK expects every field as transmitted.
 
-| Field                           | Required | Notes                                                                                                                                              |
-| ------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `requestId`                     | yes      | Per-session request identifier.                                                                                                                    |
-| `service`                       | yes      | `"in.juspay.hyperpay"` for HyperCheckout.                                                                                                          |
-| `payload.clientId`              | yes      | Merchant's `payment_page_client_id`.                                                                                                               |
-| `payload.amount`                | yes      | Echoed from the request.                                                                                                                           |
-| `payload.merchantId`            | yes      | Merchant's ID.                                                                                                                                     |
-| `payload.clientAuthToken`       | yes      | TokenAuth bearer the SDK uses for its own follow-up calls. **15-minute lifetime** (`euler-webservice/src/Euler/WebService/Config/Config.hs:1131`). |
-| `payload.clientAuthTokenExpiry` | yes      | Token expiry timestamp.                                                                                                                            |
-| `payload.environment`           | yes      | `"sandbox"` or `"production"`.                                                                                                                     |
-| `payload.orderId`               | yes      | Echoed from the request.                                                                                                                           |
-| `expiry`                        | optional | Session-payload expiry (mirror of `order_expiry`).                                                                                                 |
-| `currTime`                      | optional | Server time at issue.                                                                                                                              |
-| `xRoutingId`                    | optional | Echo of `x-routing-id` header.                                                                                                                     |
+| Field                           | Required | Notes                                                                              |
+| ------------------------------- | -------- | ---------------------------------------------------------------------------------- |
+| `requestId`                     | yes      | Per-session request identifier.                                                    |
+| `service`                       | yes      | `"in.juspay.hyperpay"` for HyperCheckout.                                          |
+| `payload.clientId`              | yes      | Merchant's `payment_page_client_id`.                                               |
+| `payload.amount`                | yes      | Echoed from the request.                                                           |
+| `payload.merchantId`            | yes      | Merchant's ID.                                                                     |
+| `payload.clientAuthToken`       | yes      | TokenAuth bearer the SDK uses for its own follow-up calls. **15-minute lifetime.** |
+| `payload.clientAuthTokenExpiry` | yes      | Token expiry timestamp.                                                            |
+| `payload.environment`           | yes      | `"sandbox"` or `"production"`.                                                     |
+| `payload.orderId`               | yes      | Echoed from the request.                                                           |
+| `expiry`                        | optional | Session-payload expiry (mirror of `order_expiry`).                                 |
+| `currTime`                      | optional | Server time at issue.                                                              |
+| `xRoutingId`                    | optional | Echo of `x-routing-id` header.                                                     |
 
 ## Worked example
 

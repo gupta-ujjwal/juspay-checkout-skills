@@ -53,6 +53,6 @@ Phase 1's vertical is **HyperCheckout end-to-end**: 1C-HC adds the orchestrator 
 
 Phase 1 cards deliberately exclude flows whose behaviour depends on a merchant-enablement gate that fails silently (the merchant integrates against the skill, the call appears to succeed, the capability quietly does nothing). The exclusion list lives in [`README.md`](../README.md) §"Phase 1 omissions". If a flow you need isn't in the bank, check there before assuming the bank is incomplete.
 
-## Source-of-truth discipline
+## Accuracy
 
-Every claim in every card is grounded in the Juspay Euler source code (`euler-workspace-5/`). When the public docs at `juspay.io/sea/docs/` and the source disagree, **code wins**. Cards cite `file:line` — agents and reviewers can verify each claim against the implementation.
+Cards in this bank are verified against Juspay's actual API behaviour at authoring time, not just the public-doc prose. Where doc and behaviour disagree, behaviour wins.

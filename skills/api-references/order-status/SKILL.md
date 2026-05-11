@@ -29,9 +29,9 @@ Do **not** trust the webhook body's `content.order` snapshot as final state — 
 | Sandbox     | `GET https://sandbox.juspay.in/orders/{order_id}` |
 | Production  | `GET https://api.juspay.in/orders/{order_id}`     |
 
-The `{order_id}` is the merchant's `order_id` from session/order create. Public path is path-parameter form (`OrderStatusUrlCapture` at `euler-api-order/src/Euler/Server.hs:2540`).
+The `{order_id}` is the merchant's `order_id` from session/order create. Use the path-parameter form on new integrations.
 
-JWE variant (`GET /v4/order-status`) for merchants on encrypted endpoints — gated by `MerchantAccount.basiliskKeyId`, deferred to Phase 2. Do **not** use the legacy `/orderStatus?order_id=` query-param form on new integrations — it exists for backward-compat only (`Server.hs:2544-2550`).
+JWE variant (`GET /v4/order-status`) for merchants on encrypted endpoints — gated by account-level encryption keys (`basiliskKeyId`), deferred to Phase 2. Do **not** use the legacy `/orderStatus?order_id=` query-param form on new integrations — it exists for backward-compat with older merchants only.
 
 ## Authentication
 
@@ -43,7 +43,7 @@ x-merchantid: <merchant_id>
 x-routing-id: <customer_id_or_order_id>
 ```
 
-`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout. Auth scheme parsed at `AuthKeyService.hs:46-71`; `withXRoutingId` middleware at `Server.hs:339`. The optional `version` header is documented in `foundations/authentication/`.
+`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout. `version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
 
 ## Query parameters
 
@@ -53,9 +53,9 @@ x-routing-id: <customer_id_or_order_id>
 
 ## Response
 
-`OrderStatusResponse` at `euler-api-order/src/Euler/Product/Domain/OrderStatusResponse.hs:124-210`. The full type has 80+ fields (most nullable).
+The order-status response has 80+ fields (most nullable). Each one of: order identification, money amounts, customer details, status, payment-method specifics, refund history, gateway response, EMI/mandate/offer/risk auxiliaries.
 
-> **The tables below show a curated subset** — the fields a HyperCheckout backend agent typically needs. Other fields exist in the response (`mandate`, `metadata`, `chargebacks`, `risk`, `risk_checks`, `offers`, `emi_details`, `installment_plan_block`, `notification`, `additional_info`, `txn_additional_info`, `next_action`, `actions`, `pki_bind_details`, `card_present_payment_details`, etc.) and will appear in real responses. For exhaustive enumeration, read `OrderStatusResponse.hs:124-210` directly.
+> **The tables below show a curated subset** — the fields a HyperCheckout backend agent typically needs. Other fields exist in the response (`mandate`, `metadata`, `chargebacks`, `risk`, `risk_checks`, `offers`, `emi_details`, `installment_plan_block`, `notification`, `additional_info`, `txn_additional_info`, `next_action`, `actions`, `pki_bind_details`, `card_present_payment_details`, etc.) and will appear in real responses. Consult the public order-status API reference for the full type when you need a field not listed here.
 
 ### Identification and amounts
 
@@ -93,9 +93,9 @@ x-routing-id: <customer_id_or_order_id>
 
 ### Status values
 
-The `status` enum is `OrderStatus` at `euler-db/src/Euler/Types/Order.hs:158-181` — **23 constructors total**.
+The `status` enum has **23 values total**.
 
-> **Subset shown below.** The 12 wire values an agent will commonly receive on a HyperCheckout integration. The other 11 (`Authorizing`, `CaptureFailed`, `CaptureInitiated`, `Created`, `Error`, `MerchantVoided`, `Declined`, `AutoVoided`, `VoidFailed`, `VoidInitiated`, `NotFound`) **will arrive in production** for gateway edge cases, pre-auth flows, and merchant-side voids. Treat any unknown status as terminal-uncertain: do not assume success or failure; call `GET /orders/{order_id}` again or escalate. See `Order.hs:158-181` for the canonical list.
+> **Subset shown below.** The 12 wire values an agent will commonly receive on a HyperCheckout integration. The other 11 (`AUTHORIZING`, `CAPTURE_FAILED`, `CAPTURE_INITIATED`, `CREATED`, `ERROR`, `MERCHANT_VOIDED`, `DECLINED`, `AUTO_VOIDED`, `VOID_FAILED`, `VOID_INITIATED`, `NOT_FOUND`) **will arrive in production** for gateway edge cases, pre-auth flows, and merchant-side voids. Treat any unknown status as terminal-uncertain: do not assume success or failure; call `GET /orders/{order_id}` again or escalate.
 
 | Wire value              | Meaning                                                                     |
 | ----------------------- | --------------------------------------------------------------------------- |
@@ -137,7 +137,7 @@ The `status` enum is `OrderStatus` at `euler-db/src/Euler/Types/Order.hs:158-181
 
 ### Refunds (per-refund records)
 
-`refunds` is `Maybe [D.Refund]` (`OrderStatusResponse.hs:151`); each entry's shape is at `euler-api-order/src/Euler/Product/Domain/Refund.hs:20-60`. Key fields per refund:
+`refunds` is an optional array — present when the order has been refunded (fully or partially). Each entry has these fields:
 
 | Field               | Type      | Notes                                                             |
 | ------------------- | --------- | ----------------------------------------------------------------- |

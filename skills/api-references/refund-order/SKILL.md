@@ -21,7 +21,7 @@ If you only need to read the current refund state of an order, call `GET /orders
 
 - `foundations/authentication/` — KeyAuth scheme.
 - An order in `CHARGED` (or `PARTIAL_CHARGED`) status — refunds against unsuccessful orders are rejected with `invalid.order.not_successful`.
-- `MerchantAccount.enabledInstantRefund = true` if the merchant requires instant-refund behaviour. Off → 400 with "instant refund flag is not enabled" (`euler-api-txns/oltp/src-generated/Product/OLTP/Refund/Validation.hs:1072`).
+- The merchant account must have `enabledInstantRefund` flipped on (account-level flag — coordinate with Juspay support). Off → 400 with `"instant refund flag is not enabled"`.
 
 ## Endpoint
 
@@ -30,16 +30,9 @@ If you only need to read the current refund state of an order, call `GET /orders
 | Sandbox     | `POST https://sandbox.juspay.in/orders/{order_id}/refunds` |
 | Production  | `POST https://api.juspay.in/orders/{order_id}/refunds`     |
 
-Handler at `euler-api-txns/src/Euler/API/Txns/Server.hs:221`:
-
-```haskell
-registerTransHandler Post [url| /orders/:order_id/refunds |]
-  ... (TransTxns.refundDecider False V1) whitelistedRef rt POST_ORDERID_BASED_REFUND
-```
-
 ## Authentication
 
-KeyAuth, with one additional required header (note: **not** `x-routing-id` — the txns service does not apply `withXRoutingId` middleware, verified by absence in `euler-api-txns/src/`):
+KeyAuth, with one additional required header — note that unlike session/order-status, the refund route does **not** require `x-routing-id`:
 
 ```http
 Authorization: Basic <base64(api_key + ":")>
@@ -47,11 +40,11 @@ x-merchantid: <merchant_id>
 Content-Type: application/x-www-form-urlencoded
 ```
 
-Auth scheme parsed at `AuthKeyService.hs:46-71`. The route uses `whitelistedRef` (KeyAuth-equivalent) per `Server.hs:221`. The optional `version` header is documented in `foundations/authentication/`.
+`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
 
 ## Request body
 
-`application/x-www-form-urlencoded`. Request type `RefundReq` at `euler-api-txns/euler-x/src-generated/Types/Communication/OLTP/Refund.hs:143`.
+`application/x-www-form-urlencoded`.
 
 ### Required fields
 
@@ -62,19 +55,19 @@ Auth scheme parsed at `AuthKeyService.hs:46-71`. The route uses `whitelistedRef`
 
 ### Optional fields
 
-| Field               | Type   | Notes                                                                                     |
-| ------------------- | ------ | ----------------------------------------------------------------------------------------- |
-| `txn_id`            | string | Specific txn to refund against (when an order has multiple txns).                         |
-| `initiated_by`      | string | `merchant` (default) / `customer`.                                                        |
-| `refund_type`       | string | Gateway-specific refund type (rare).                                                      |
-| `refund_reason`     | string | One of Juspay's reason codes (see `euler-db/src/Euler/DB/Storage/Types/RefundReason.hs`). |
-| `metaData`          | string | Pass-through metadata for reconciliation.                                                 |
-| `webhook_url`       | string | One-shot webhook override for this refund's events.                                       |
-| `include_surcharge` | bool   | Include surcharge in the refund amount.                                                   |
+| Field               | Type   | Notes                                                                                |
+| ------------------- | ------ | ------------------------------------------------------------------------------------ |
+| `txn_id`            | string | Specific txn to refund against (when an order has multiple txns).                    |
+| `initiated_by`      | string | `merchant` (default) / `customer`.                                                   |
+| `refund_type`       | string | Gateway-specific refund type (rare).                                                 |
+| `refund_reason`     | string | One of Juspay's reason codes (consult the dashboard or refund-reason documentation). |
+| `metaData`          | string | Pass-through metadata for reconciliation.                                            |
+| `webhook_url`       | string | One-shot webhook override for this refund's events.                                  |
+| `include_surcharge` | bool   | Include surcharge in the refund amount.                                              |
 
 ## Response
 
-The response is **`OrderStatusResponse`** — the same shape as `GET /orders/{order_id}` — with the new refund appended to the `refunds[]` array. Verified at `euler-api-txns/oltp/src-generated/Engineering/WorkFlow/RefundWorkFlow.hs:1286-1295` (handler returns the order via `OrderStatus.getOrderStatusWithoutAuthOSR`, then enriches with refund details).
+The response is the **order object** — the same shape as `GET /orders/{order_id}` — with the new refund appended to the `refunds[]` array.
 
 The new refund's `status` is initially `PENDING`; it transitions to `SUCCESS`, `FAILURE`, or `MANUAL_REVIEW` asynchronously. Subscribe to refund webhook events (`REFUND_SUCCEEDED`, `REFUND_FAILED`, `REFUND_MANUAL_REVIEW_NEEDED`) and reconcile via `GET /orders/{order_id}` — same pattern as charge-state reconciliation.
 
@@ -143,7 +136,7 @@ Don't retry network failures with a fresh `unique_request_id` — the original m
 | 400    | `invalid.amount.exceeded`            | Refund amount > unrefunded balance.                                      | Check `amount - amount_refunded` from `GET /orders/{order_id}`.                                           |
 | 400    | `invalid amount`                     | `amount` is zero, negative, or non-numeric.                              | Stringified decimal, > 0, ≤ refundable balance.                                                           |
 | 400    | `mandatory.fields.missing`           | `unique_request_id` or `amount` not in the body.                         | Both are required.                                                                                        |
-| 400    | "instant refund flag is not enabled" | `MerchantAccount.enabledInstantRefund = false`.                          | Contact Juspay to enable instant refund on the merchant account. (`Validation.hs:1072`)                   |
+| 400    | "instant refund flag is not enabled" | Merchant account's `enabledInstantRefund` flag is off.                   | Contact Juspay support to enable instant refund on the merchant account.                                  |
 | 400    | `invalid.order.not_successful`       | The order's `status` is not `CHARGED` / `PARTIAL_CHARGED`.               | Refunds only work on successful orders.                                                                   |
 | 400    | `request.exceeded`                   | More than 25 refund attempts on this order.                              | Default per-order refund-attempt cap. Contact Juspay for an increase.                                     |
 | 401    | `access_denied`                      | `Authorization` or `x-merchantid` missing/wrong.                         | Re-check headers.                                                                                         |
