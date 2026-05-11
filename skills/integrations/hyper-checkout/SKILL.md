@@ -80,26 +80,28 @@ This is the same backend call (`POST /session`) for both — the merchant's fron
 
 After handoff, the customer interacts with Juspay's hosted page; the merchant's server is **not on the critical path** during the payment itself. The next time the merchant hears anything is the webhook (step 4) or the customer's redirect to `return_url`.
 
-### Step 4 — Receive the webhook
+### Step 4 — A reconciliation trigger fires
 
-Implement the webhook receiver per `foundations/webhooks-and-signatures/`: HTTP Basic Auth verification, **persist → ack 200 → process asynchronously**, dedupe on `event.id`.
+The merchant backend has **two independent triggers** that should both kick off the order-status reconciliation in Step 5:
 
-For HyperCheckout, the events you'll see in the happy path:
+| Trigger                   | What fires it                                                                                                                                                                                                                   | What it tells you                                                                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Webhook**               | Juspay POSTs an event to your registered webhook URL whenever a subscribed event fires (which events fire depends on the merchant's dashboard subscriptions, not the integration type).                                         | A state change happened. Verify Basic Auth, persist the event, return 200 immediately, then call Step 5. **Don't trust the webhook body as final state** — `content.order` is an event-time snapshot. |
+| **Return-URL / handover** | Once the hosted page reaches a terminal state (or stays `PENDING` past a configurable timeout), Juspay redirects the customer's browser to your `return_url` (web/mweb) or hands control back to the merchant app (native SDK). | The customer is back on your surface. The frontend signals the backend; the backend calls Step 5 to figure out the actual status and decide what to show next.                                        |
 
-- `ORDER_SUCCEEDED` — payment captured.
-- `ORDER_FAILED` — authorisation declined.
-- Plus the refund family (`REFUND_SUCCEEDED`, `REFUND_FAILED`, `ORDER_REFUNDED`) when a refund completes asynchronously.
+Both paths converge on Step 5. Implement both — webhooks alone can be delayed or missed; redirects alone don't fire for asynchronous-settlement payment methods that complete after the user closes the page. Receiving both for the same order is normal; idempotent processing handles the overlap.
 
-Treat the webhook body's `content.order` as an **event-time snapshot**, not as authoritative state. Step 5 is what gives you ground truth.
+Receiver mechanics (auth, ack, dedup) for the webhook path: `foundations/webhooks-and-signatures/`.
 
 ### Step 5 — Reconcile via `GET /orders/{order_id}`
 
-Asynchronously (immediately on webhook receipt is fine, but don't block the ack), call `GET /orders/{order_id}` with KeyAuth + `x-merchantid` + `x-routing-id`. Treat the response's `status` field as authoritative.
+Call `GET /orders/{order_id}` with the standard KeyAuth header set plus `version: YYYY-MM-DD` (see `api-references/order-status/` for the `version` header convention). Treat the response's `status` field as authoritative.
 
-Why this step exists rather than trusting the webhook directly:
+Why a separate reconciliation call rather than trusting the trigger directly:
 
 - Webhooks may be redelivered, arrive out of order, or be missed entirely.
 - The webhook body is an event-time snapshot; intervening events (auto-refund, void) may have superseded it.
+- The return-URL handover gives the frontend the customer back but no state — only that the hosted page has finished or timed out.
 - Order-status is the **only call Juspay guarantees as the source of record** for order state.
 
 For the full response schema and the status enum, see `api-references/order-status/`. For reconciliation timing, see "Gotchas" below.
