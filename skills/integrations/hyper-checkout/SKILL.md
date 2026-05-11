@@ -45,11 +45,18 @@ Steps 1–3 are the outbound flow; steps 5–8 are the reconciliation loop. The 
 
 Outbound flow plus reconciliation loop. Step 0 only applies to **logged-in customer flows**; guest checkouts skip straight to Step 1.
 
-### Step 0 — Create-or-fetch the customer (logged-in flows only)
+### Step 0 — Create-or-fetch the customer (whenever you need a customer identity)
 
-If the customer is logged into the merchant's app and you want them to see / use **saved payment methods** (saved cards, saved wallets), call `POST /v2/customers/{merchantCustomerId}` first. Pass the merchant's stable customer ID as the path parameter; Juspay creates the record on first call and returns the existing one on repeats. Persist the returned `id` (Juspay's `cst_*`) alongside your own customer record so the relationship is recoverable.
+Call `POST /v2/customers/{merchantCustomerId}` first when **any** of these apply to the flow:
 
-Skip this step entirely for **guest checkouts** — there's no customer record to associate with, and `POST /session` runs without `customer_id`.
+- Tokenization / saved cards (card-on-file).
+- Linked-wallet flows (wallet linked once, charged repeatedly).
+- Subscription / mandate flows (Phase 2).
+- Cross-session analytics — Juspay's FRM, 3DS step-up history, and similar signals are scoped by customer ID across sessions; without a record each session is anonymous.
+
+Pass the merchant's stable customer ID as the path parameter. Juspay creates the record on first call and returns the existing one on repeats — same ID is safe to replay. **You don't need to persist Juspay's internal `cst_*` ID**; your own `merchantCustomerId` is the identity you'll reuse on `POST /session` (as `customer_id`) and on every subsequent customer-scoped call.
+
+Skip this step entirely for **pure guest one-shot checkouts** that don't need any of the capabilities above — `POST /session` runs without `customer_id` and the hosted page treats the payment as anonymous.
 
 Payload + response details: `api-references/create-customer/`.
 
@@ -60,7 +67,7 @@ Server-side, gather what `POST /session` needs:
 - The merchant's `order_id` (your idempotency key — see "Idempotency" below).
 - `amount` (stringified decimal, two places) and `currency` (three-letter code — set explicitly, don't rely on the INR default).
 - `payment_page_client_id` from the dashboard.
-- `customer_id` **only if** Step 0 happened — i.e. logged-in flows that want saved-PM scoping. Guest checkouts omit it.
+- `customer_id` **only if** Step 0 happened — i.e. flows that need a Juspay customer record (saved PMs, linked wallets, mandates, cross-session analytics). Pass the same `merchantCustomerId` you used in Step 0. Guest one-shot checkouts omit this.
 - Everything else (`customer_email`, `customer_phone`, `return_url`, `udf*`, etc.) is optional — see `api-references/session/` §"Request body" for the full requirement table.
 
 ### Step 2 — Call `POST /session`

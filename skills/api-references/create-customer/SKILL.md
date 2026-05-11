@@ -1,6 +1,6 @@
 ---
 name: create-customer
-description: Create-or-fetch a Juspay customer record for a logged-in merchant customer — the prerequisite for any HyperCheckout flow that needs saved payment methods (saved cards, saved wallets) scoped to that customer. Use when implementing a logged-in checkout, registering a new merchant customer with Juspay, or fetching an existing customer's record before issuing a session.
+description: Create-or-fetch a Juspay customer record keyed by the merchant's own customer ID — the prerequisite for tokenization (saved cards), linked-wallet flows, subscription/mandate flows, and cross-session analytics (FRM, 3DS step-up history). Use when any of those capabilities matter; skip for pure guest one-shot checkouts.
 ---
 
 # Create Customer API — `POST /v2/customers/{merchantCustomerId}`
@@ -9,13 +9,16 @@ Creates or fetches a Juspay customer record keyed by the **merchant's** customer
 
 ## When to use
 
-You need a Juspay-side customer to scope saved payment methods to:
+A Juspay customer record is the precondition for any capability that needs a persistent customer identity inside Juspay:
 
-- **Logged-in HyperCheckout flow** — the customer has an account on the merchant side and wants to reuse saved cards/wallets across sessions. Call this card before `POST /session`, then pass the same `customer_id` to the session.
-- **Customer enrolment** — a new merchant signup, where you want a Juspay customer ready for the first payment.
-- **Customer update** — the merchant has new contact details; passing `update=true` refreshes the existing record.
+- **Tokenization / saved cards** — card-on-file flows. A card is tokenised against the customer for repeat use without re-entering details.
+- **Linked-wallet flows** — wallet providers that link once and are charged repeatedly (e.g. Paytm-style linked wallets).
+- **Subscription / mandate flows** — recurring billing (Phase 2; mandate setup uses the customer record as the mandate holder).
+- **Cross-session analytics** — Juspay's Fraud Risk Management (FRM), 3DS step-up history, and similar analytics are **scoped by customer ID across sessions**. Without a customer record, each session is treated as anonymous and risk decisions can't draw on past behaviour.
 
-**For guest checkouts**, skip this card entirely. Issue `POST /session` without a `customer_id` and the hosted page treats the payment as one-off.
+For pure one-shot **guest checkouts** that don't need any of the above, skip this card. Issue `POST /session` without a `customer_id` and the hosted page treats the payment as anonymous.
+
+Also use this card to **update** an existing customer's contact details — pass `update="true"` with the new field values.
 
 ## Prerequisites
 
@@ -70,13 +73,13 @@ All body fields are optional — the call works with an empty body and just the 
 }
 ```
 
-| Field                           | Type      | Meaning                                                                                                                                                                 |
-| ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                            | string    | Juspay's internal customer ID (`cst_*`). Persist this server-side; Juspay uses it internally to scope saved PMs.                                                        |
-| `object_reference_id`           | string    | Echo of `merchantCustomerId` from the URL — the merchant's own ID.                                                                                                      |
-| `mobile_*`, `email_*`, names    | strings   | Echo of what was posted (or what was previously stored if the record already existed and `update` was not sent).                                                        |
-| `date_created` / `last_updated` | timestamp | Record lifecycle.                                                                                                                                                       |
-| `juspay.client_auth_token`      | string    | Optional 15-minute bearer token, present only when `options.get_client_auth_token=true` was sent. Forward to the frontend SDK if the SDK needs to call Juspay directly. |
+| Field                           | Type      | Meaning                                                                                                                                                                                            |
+| ------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                            | string    | Juspay's internal customer ID (`cst_*`). **Merchants don't need to persist this** — your own `merchantCustomerId` is the identity you'll pass on subsequent calls. The `cst_*` is internal trivia. |
+| `object_reference_id`           | string    | Echo of `merchantCustomerId` from the URL — the merchant's own ID. Juspay uses this to resolve `customer_id` on subsequent `POST /session` calls.                                                  |
+| `mobile_*`, `email_*`, names    | strings   | Echo of what was posted (or what was previously stored if the record already existed and `update` was not sent).                                                                                   |
+| `date_created` / `last_updated` | timestamp | Record lifecycle.                                                                                                                                                                                  |
+| `juspay.client_auth_token`      | string    | Optional 15-minute bearer token, present only when `options.get_client_auth_token=true` was sent. Forward to the frontend SDK if the SDK needs to call Juspay directly.                            |
 
 ## Worked example
 
@@ -102,11 +105,13 @@ curl -sSL -X POST "https://sandbox.juspay.in/v2/customers/$MERCHANT_CUSTOMER_ID"
 
 The same call with the same `merchantCustomerId` is safe to replay — Juspay returns the existing customer rather than creating a duplicate. Use this property to retry on network failures without bookkeeping.
 
-## Idempotency
+## Idempotency and identity
 
-The path-parameter `{merchantCustomerId}` is the dedup key. **Generate it once per merchant customer and persist it server-side.** Same ID + different body fields → existing record returned, fields unchanged (unless `update=true`). Same ID + `update=true` → existing record updated with whatever body fields are present.
+The path-parameter `{merchantCustomerId}` **is** the customer's identity from the integration's perspective. **Generate it once per real-world customer and persist it on the merchant side.** Same ID + different body fields → existing record returned, fields unchanged (unless `update=true`). Same ID + `update=true` → existing record updated with whatever body fields are present.
 
-Do **not** mint a fresh `merchantCustomerId` on retry — that creates a duplicate Juspay customer record with the same human customer, and you'll lose the saved-PM scoping benefit (saved cards live under one specific `cst_*`).
+Do **not** mint a fresh `merchantCustomerId` on retry — that creates a duplicate Juspay customer record for the same human, and saved cards / linked wallets / analytics history end up split across two records.
+
+You don't need to track Juspay's `cst_*` ID on your side. Subsequent calls (e.g. `POST /session` with `customer_id`) resolve against the `merchantCustomerId` you originally provided; Juspay handles the `cst_*` ↔ `merchantCustomerId` mapping internally.
 
 ## Common errors
 
