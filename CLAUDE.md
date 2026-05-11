@@ -10,8 +10,8 @@ This file guides any AI agent (and the maintainer) working _on_ the skill bank. 
 
 - **1A (spine) — shipped** in PR #7 (commit `43323e1` on main): `skills/SKILL.md`, `skills/foundations/authentication/SKILL.md`, `skills/foundations/webhooks-and-signatures/SKILL.md`.
 - **PR-A scope-narrow + ref-data corrections — shipped** in PR #10 (commit `e5d68df` on main): closed #3.
-- **1B-HC (api-references HyperCheckout calls) — shipped** in this PR: `api-references/{session, order-status, refund-order}/`. Each declares its own auth scheme and required headers; foundation auth card shrunk to scheme-proper (closes #6 and #9). Reference-data correction landed inline: `enabledInstantRefund` raises **400** (not 403) from `Refund/Validation.hs:1072` (not `Decider.hs`).
-- **1C-HC (orchestrator) — next**: `integrations/hyper-checkout/`. The "reconcile via order-status" pattern moves here from the webhooks foundation (closes #5).
+- **1B-HC (api-references HyperCheckout calls) — shipped** in PR #12: `api-references/{session, order-status, refund-order}/`. Each declares its own auth scheme and required headers; foundation auth card shrunk to scheme-proper (closes #6 and #9). Reference-data correction landed inline: `enabledInstantRefund` raises **400** (not 403) from `Refund/Validation.hs:1072` (not `Decider.hs`). Round-1 user feedback (no internal code refs in cards, version-header mandatory for new merchants, base URLs consolidated, session required-fields restructured, `epg_txn_id` surfaced, `TO_BE_CHARGED` semantic corrected, dual native/web handoff documented) landed inside the same PR before merge.
+- **1C-HC (orchestrator) — shipped** in this PR: `integrations/hyper-checkout/`. The "reconcile via order-status" pattern relocated from `foundations/webhooks-and-signatures/` (closes #5); auth foundation's per-route header card-list collapsed to a generic pointer (closes #11). **Phase 1 is complete.**
 
 **Bank scope is backend-only** — server-to-server APIs and the response payload that the merchant's backend hands to its frontend SDK. SDK rendering, iframe handling, and per-platform initialisation are out of scope (future separate bank).
 

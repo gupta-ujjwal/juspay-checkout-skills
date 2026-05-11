@@ -12,7 +12,9 @@ Phase 1 is sub-phased and ships **HyperCheckout end-to-end** as one complete ver
 | ------------------------------------------ | ------------------------------------------------------------------------- | ------- |
 | 1A — spine                                 | bank `SKILL.md`, `foundations/{authentication, webhooks-and-signatures}/` | shipped |
 | 1B-HC — api-references HyperCheckout calls | `api-references/{session, order-status, refund-order}/`                   | shipped |
-| 1C-HC — orchestrator                       | `integrations/hyper-checkout/`                                            | next    |
+| 1C-HC — orchestrator                       | `integrations/hyper-checkout/`                                            | shipped |
+
+**Phase 1 complete.** A backend agent loading this bank can integrate HyperCheckout end-to-end without consulting external docs.
 
 ---
 

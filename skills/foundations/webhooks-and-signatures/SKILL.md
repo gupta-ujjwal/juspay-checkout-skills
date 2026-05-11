@@ -78,15 +78,7 @@ Additional event families exist for mandates and notifications and follow their 
 
 ## Reconcile, don't trust
 
-Juspay's architecture treats the order-status API as the **authoritative source of order state**. Webhooks are event hints — they tell you _something happened_, but the body may lag, may be redelivered, or may be missed entirely.
-
-The recommended pattern:
-
-1. Receive the webhook, verify Basic Auth, persist the event, return `200`.
-2. Asynchronously, call `GET /orders/{order_id}` (KeyAuth + `x-merchantid` + `x-routing-id`) and treat that response as ground truth. See `api-references/order-status/` for the full schema.
-3. Update your local order state from the order-status response, not from the webhook body.
-
-This pattern is robust to redelivery, ordering, and missed events.
+Webhooks are **event hints**, not authoritative state. The body may lag, be redelivered, or be missed entirely. Reconciliation — calling `GET /orders/{order_id}` after a webhook and treating that response as ground truth — is the merchant's responsibility, and the **full reconciliation sequence is documented in the orchestrator card for the integration shape you're using** (`integrations/hyper-checkout/` in Phase 1; ECSDK and ECB orchestrators in later phases). This card stops at "the event arrived; ack it"; what to do next is an orchestrator concern, not a webhook-delivery concern.
 
 ## Signature verification — deferred to Phase 2
 
