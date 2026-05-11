@@ -1,20 +1,25 @@
 ---
 name: order-fulfillment
-description: Inform Juspay that a paid order has been fulfilled (shipped, delivered, service rendered) — feeds Juspay's analytics for the merchant's fulfilment rate (orders actually fulfilled vs orders that reached `CHARGED`). Use after delivering on a `CHARGED` order to close the analytics loop. Good-to-have, not required for the payment flow itself.
+description: Record a fulfilment event (success or failure) against a paid Juspay order — stores a merchant-side fulfilment identifier (airline PNR, hotel booking ID, e-commerce order ID, shipment ID) plus arbitrary metadata. Juspay echoes the data on the merchant dashboard and inside `GET /orders/{order_id}` responses, so one call feeds multiple downstream systems from a single source of truth. Good-to-have post-`CHARGED`, not required for the payment flow.
 ---
 
 # Order Fulfilment API — `POST /orders/{order_id}/fulfillment`
 
-Tells Juspay that the merchant has fulfilled (or partially fulfilled, or failed to fulfill) an order whose payment is already `CHARGED`. Juspay treats this as analytics input — surfacing fulfilment-rate metrics on the merchant dashboard — and does **not** gate any payment functionality on it. Optional from a flow-correctness perspective; valuable for the analytics it enables.
+Records a fulfilment event against a paid order — **success or failure** — and stores a merchant-side fulfilment identifier plus structured metadata. Juspay surfaces what you record both on the merchant dashboard's fulfilment module **and** inside `GET /orders/{order_id}` responses going forward, so this single call becomes the source of truth for downstream merchant systems (analytics warehouses, CRM, support tools) regardless of whether they read from the dashboard or the API.
+
+The payment flow doesn't gate on this call; payment correctness ends at `CHARGED`. But for any integration that wants its fulfilment identity and outcome to flow back through Juspay's data plane, this is the canonical write surface.
 
 ## When to use
 
-The order has reached `CHARGED` (the merchant has the customer's money) and the merchant has now actually delivered on the underlying obligation — shipped a physical good, granted access to a service, etc. Call this once per fulfilment event so Juspay can compute:
+Call this when the merchant has reached a definitive fulfilment outcome on a `CHARGED` order — succeed or fail — for any of three reasons:
 
-- **Fulfilment rate** — `orders fulfilled / orders charged` over the merchant's history. A widely-watched health metric.
-- Reverse-logistics signals — if you mark `fulfillment_status="FAILED"`, Juspay surfaces this on dashboards to help track operational issues.
+1. **Canonical fulfilment record.** Tell Juspay the outcome: `fulfillment_status="FULFILLED"` for shipped/delivered/service-rendered; `"FAILED"` when logistics or a merchant-side issue prevented delivery; `"PARTIAL_FULFILLED"` for split shipments; `"PENDING"` while in progress.
+2. **Cross-system identity carrier.** Pass `fulfillment_id` — the merchant's identifier for the fulfilment (airline PNR, hotel booking ID, e-commerce order ID, shipment / waybill ID). Pair it with `fulfillment_data` (arbitrary JSON) for whatever else the merchant's systems need to round-trip (courier name, tracking URL, line items, …). Juspay stores this verbatim and exposes it as the canonical fulfilment cross-reference on the order.
+3. **Dashboard + order-status feed.** Whatever you record appears on the Juspay merchant dashboard's fulfilment module **and** inside the order's subsequent `GET /orders/{order_id}` response payloads. Downstream merchant systems can consume from either surface and stay in sync.
 
-Skip this card entirely if the merchant doesn't care about fulfilment-rate analytics on the Juspay dashboard. The payment flow itself completes at `CHARGED`; nothing about reconciliation, refunds, or future sessions depends on calling fulfilment.
+The fulfilment-rate metric (orders fulfilled / orders charged) on the dashboard is one downstream consumer of this data; the cross-system identity flow is a more common reason to wire the call in.
+
+Skip this card entirely only if the merchant doesn't care about either the dashboard signal **or** the order-status echo. Pure one-shot payment flows that complete at `CHARGED` and never need to feed fulfilment identity into other systems can omit it.
 
 ## Prerequisites
 
@@ -44,13 +49,18 @@ KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: appli
 | `fulfillment_status`  | enum | Outcome of fulfilment. Common values: `FULFILLED` (delivered successfully), `PARTIAL_FULFILLED` (some items shipped), `FAILED` (logistics or merchant-side issue prevented fulfilment), `PENDING` (in progress; expect an update).       |
 | `fulfillment_command` | enum | What the merchant is asking Juspay to record. The most common is `MARK_FULFILLED` (record this as the canonical fulfilment event). Other commands exist for tagged sub-events; consult Juspay support if standard `MARK_*` isn't enough. |
 
-### Optional fields
+### Recommended (technically optional, but use them)
+
+| Field              | Type   | Notes                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fulfillment_id`   | string | **The merchant's identifier for this fulfilment.** Examples: airline PNR, hotel booking ID, e-commerce order ID, shipment / waybill ID, service ticket ID. Juspay echoes this verbatim on the dashboard and in subsequent `GET /orders/{order_id}` responses, so downstream merchant systems can cross-reference. |
+| `fulfillment_data` | string | Free-form JSON-encoded blob for merchant-specific structured metadata (courier name, tracking URL, line items, fulfilment notes, …). Round-trips through Juspay alongside `fulfillment_id`.                                                                                                                       |
+| `fulfillment_time` | string | ISO 8601 timestamp of when fulfilment actually occurred. Defaults to call-receipt time if absent.                                                                                                                                                                                                                 |
+
+### Other optional fields
 
 | Field                      | Type   | Notes                                                                                                                        |
 | -------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `fulfillment_id`           | string | Merchant's internal fulfilment / shipment ID (idempotency key on the merchant side — pass it for traceability).              |
-| `fulfillment_time`         | string | ISO 8601 timestamp of when fulfilment actually occurred. Defaults to call-receipt time if absent.                            |
-| `fulfillment_data`         | string | Free-form JSON-encoded blob for merchant-specific metadata (courier name, tracking number, …).                               |
 | `invoice_details`          | string | Merchant invoice reference, if the merchant has issued an invoice.                                                           |
 | `refund_amount`            | string | If fulfilment failed and the merchant has already refunded the customer, pass the refunded amount for analytics correlation. |
 | `imei`                     | string | Device IMEI for high-risk fulfilment categories (electronics); used in fraud analytics.                                      |

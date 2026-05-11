@@ -133,9 +133,9 @@ For the full table covering all 23 status values and the catch-all unknown-statu
 
 ### Step 7 — Record fulfilment (optional, post-`CHARGED`)
 
-After the merchant has actually delivered on a `CHARGED` order (shipped the goods, granted access, etc.), optionally call `POST /orders/{order_id}/fulfillment` to tell Juspay the loop closed. Juspay uses this for **fulfilment-rate analytics** on the dashboard — `orders fulfilled / orders charged` over the merchant's history.
+Once the merchant reaches a definitive fulfilment outcome on a `CHARGED` order — **success or failure** — optionally call `POST /orders/{order_id}/fulfillment` with the outcome plus a `fulfillment_id` (the merchant's own identifier — airline PNR, hotel booking ID, e-commerce order ID, shipment ID) and any structured metadata (`fulfillment_data`). Juspay echoes everything you record on the merchant dashboard's fulfilment module and inside subsequent `GET /orders/{order_id}` responses, so downstream merchant systems (CRM, analytics warehouses, support tools) get a single source of truth via either surface. The dashboard's fulfilment-rate metric (fulfilled / charged) is one downstream consumer; the cross-system identity flow is usually the bigger reason to wire this in.
 
-This step is **good-to-have, not required for the payment flow**. Skipping it leaves Juspay's fulfilment-rate metric at zero for the merchant; nothing else breaks. Payload + commands: `api-references/order-fulfillment/`.
+This step is **good-to-have, not required for the payment flow**. Skip it only if the merchant has no use for the dashboard signal or the order-status echo. Payload + fields: `api-references/order-fulfillment/`.
 
 ## Refunds (sub-sequence)
 
