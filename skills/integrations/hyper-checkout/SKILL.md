@@ -133,9 +133,15 @@ For the full table covering all 23 status values and the catch-all unknown-statu
 
 ### Step 7 — Record fulfilment (optional, post-`CHARGED`)
 
-Once the merchant reaches a definitive fulfilment outcome on a `CHARGED` order — **success or failure** — optionally call `POST /orders/{order_id}/fulfillment` with the outcome plus a `fulfillment_id` (the merchant's own identifier — airline PNR, hotel booking ID, e-commerce order ID, shipment ID) and any structured metadata (`fulfillment_data`). Juspay echoes everything you record on the merchant dashboard's fulfilment module and inside subsequent `GET /orders/{order_id}` responses, so downstream merchant systems (CRM, analytics warehouses, support tools) get a single source of truth via either surface. The dashboard's fulfilment-rate metric (fulfilled / charged) is one downstream consumer; the cross-system identity flow is usually the bigger reason to wire this in.
+Once the merchant reaches a definitive fulfilment outcome on a `CHARGED` order — **success or failure** — optionally call `POST /orders/{order_id}/fulfillment` to record it. **Good-to-have, not required for the payment flow.**
 
-This step is **good-to-have, not required for the payment flow**. Skip it only if the merchant has no use for the dashboard signal or the order-status echo. Payload + fields: `api-references/order-fulfillment/`.
+Three reasons to wire it in:
+
+- **Canonical fulfilment record.** Juspay learns whether the order was actually delivered, partially delivered, failed, or is still in progress. Without this call, Juspay treats the order as "paid but unknown fulfilment".
+- **Cross-system identity carrier.** The call lets the merchant attach an opaque fulfilment identifier — typical examples by domain are airline PNR, hotel booking ID, e-commerce order ID, shipment / waybill ID, service ticket ID — plus arbitrary metadata. Juspay round-trips both back to the merchant via the dashboard and subsequent order-status reads, so downstream merchant systems (CRM, analytics warehouses, support tools) can cross-reference on a single canonical ID without each system having to ping the others.
+- **Dashboard analytics.** Juspay's fulfilment-rate metric (fulfilled / charged) and reverse-logistics dashboards consume what you record here. The metric is widely watched but is one consumer among several.
+
+Skip the step only if the merchant has no downstream use for either the dashboard signal or the order-status echo. Payload + field details: `api-references/order-fulfillment/`.
 
 ## Refunds (sub-sequence)
 
