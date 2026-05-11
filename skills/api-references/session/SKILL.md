@@ -78,6 +78,13 @@ Mandate fields (`options.create_mandate`, `mandate.max_amount`, `mandate.start_d
 
 All response fields are nullable; the merchant backend should treat the absence of `sdk_payload` or `payment_links` as a request-construction error.
 
+> **The session response carries two distinct handoff payloads, one per client platform:**
+>
+> - **Native apps (Android, iOS, React Native, Flutter, Capacitor, Cordova)** — forward the `sdk_payload` object to the frontend. The native SDK consumes it directly via its initialisation API. **Do not use `payment_links.web`** on native clients.
+> - **Web / mobile-web (browser-rendered checkout)** — pass `payment_links.web` to the frontend; the browser navigates to (or iframes) the hosted payment page at that URL. The `sdk_payload.clientAuthToken` is still available for any backend-issued SDK calls the web flow makes, but the primary handoff is the link.
+>
+> The merchant backend's job is the same for both: do `POST /session`, hand the right field to the right client. Which field your frontend reads is your frontend's contract with this backend.
+
 ```json
 {
   "status": "NEW",
@@ -110,18 +117,18 @@ All response fields are nullable; the merchant backend should treat the absence 
 
 ### Field reference
 
-| Field                      | Type      | Meaning                                                                                                                                              |
-| -------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `status`                   | string    | Order status at session-create time — typically `NEW`. Full status enum: see `api-references/order-status/`.                                         |
-| `id`                       | string    | Juspay's internal order ID (`ordeh_*`).                                                                                                              |
-| `order_id`                 | string    | The `order_id` from the request (echoed).                                                                                                            |
-| `payment_links.web`        | string    | URL of the hosted payment page; only used when the merchant chooses redirect-style integration. HyperCheckout SDK doesn't navigate to this directly. |
-| `sdk_payload`              | object    | **The handoff payload.** Forward this verbatim to the frontend SDK. Fields described in the next table.                                              |
-| `order_expiry`             | timestamp | When the session expires. After expiry, the merchant must `/session` again.                                                                          |
-| `links`                    | object    | Auxiliary links (rare; mostly `null`).                                                                                                               |
-| `payment_link_qr`          | string    | QR code for the payment link (if requested).                                                                                                         |
-| `payment_gateway_response` | object    | Pre-populated gateway response (rare in HC; usually `null` until txn completes).                                                                     |
-| `base64_encoded_qr`        | string    | Base64 QR (alternative form).                                                                                                                        |
+| Field                      | Type      | Meaning                                                                                                                                         |
+| -------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `status`                   | string    | Order status at session-create time — typically `NEW`. Full status enum: see `api-references/order-status/`.                                    |
+| `id`                       | string    | Juspay's internal order ID (`ordeh_*`).                                                                                                         |
+| `order_id`                 | string    | The `order_id` from the request (echoed).                                                                                                       |
+| `payment_links.web`        | string    | URL of the hosted payment page. **Hand to web / mobile-web clients** — the browser navigates here (or iframes it). Don't use on native clients. |
+| `sdk_payload`              | object    | **Hand to native clients** (Android, iOS, RN, Flutter, etc.). Forward verbatim to the frontend; the native SDK consumes it. Fields below.       |
+| `order_expiry`             | timestamp | When the session expires. After expiry, the merchant must `/session` again.                                                                     |
+| `links`                    | object    | Auxiliary links (rare; mostly `null`).                                                                                                          |
+| `payment_link_qr`          | string    | QR code for the payment link (if requested).                                                                                                    |
+| `payment_gateway_response` | object    | Pre-populated gateway response (rare in HC; usually `null` until txn completes).                                                                |
+| `base64_encoded_qr`        | string    | Base64 QR (alternative form).                                                                                                                   |
 
 ### `sdk_payload` shape
 
