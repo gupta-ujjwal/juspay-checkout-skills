@@ -1,25 +1,26 @@
 ---
 name: order-fulfillment
-description: Record a fulfilment event (success or failure) against a paid Juspay order — stores a merchant-side fulfilment identifier (airline PNR, hotel booking ID, e-commerce order ID, shipment ID) plus arbitrary metadata. Juspay echoes the data on the merchant dashboard and inside `GET /orders/{order_id}` responses, so one call feeds multiple downstream systems from a single source of truth. Good-to-have post-`CHARGED`, not required for the payment flow.
+description: Record a fulfilment event (success or failure) against a paid Juspay order. Stores the outcome plus an optional merchant-side fulfilment identifier and metadata. Use after the merchant reaches a definitive fulfilment outcome on a `CHARGED` order. Good-to-have post-`CHARGED`, not required for the payment flow.
 ---
 
 # Order Fulfilment API — `POST /orders/{order_id}/fulfillment`
 
-Records a fulfilment event against a paid order — **success or failure** — and stores a merchant-side fulfilment identifier plus structured metadata. Juspay surfaces what you record both on the merchant dashboard's fulfilment module **and** inside `GET /orders/{order_id}` responses going forward, so this single call becomes the source of truth for downstream merchant systems (analytics warehouses, CRM, support tools) regardless of whether they read from the dashboard or the API.
+Records a fulfilment event against a paid order. The merchant tells Juspay the outcome — **success or failure** — and can attach an opaque fulfilment identifier plus structured metadata for cross-system reconciliation.
 
-The payment flow doesn't gate on this call; payment correctness ends at `CHARGED`. But for any integration that wants its fulfilment identity and outcome to flow back through Juspay's data plane, this is the canonical write surface.
+The payment flow doesn't gate on this call; payment correctness ends at `CHARGED`. See `integrations/hyper-checkout/` §Step 7 for the integration-side rationale (when in the flow to call it, what downstream merchant systems get from it).
 
 ## When to use
 
-Call this when the merchant has reached a definitive fulfilment outcome on a `CHARGED` order — succeed or fail — for any of three reasons:
+The merchant has reached a definitive fulfilment outcome on a `CHARGED` order. Call this once per outcome event:
 
-1. **Canonical fulfilment record.** Tell Juspay the outcome: `fulfillment_status="FULFILLED"` for shipped/delivered/service-rendered; `"FAILED"` when logistics or a merchant-side issue prevented delivery; `"PARTIAL_FULFILLED"` for split shipments; `"PENDING"` while in progress.
-2. **Cross-system identity carrier.** Pass `fulfillment_id` — the merchant's identifier for the fulfilment (airline PNR, hotel booking ID, e-commerce order ID, shipment / waybill ID). Pair it with `fulfillment_data` (arbitrary JSON) for whatever else the merchant's systems need to round-trip (courier name, tracking URL, line items, …). Juspay stores this verbatim and exposes it as the canonical fulfilment cross-reference on the order.
-3. **Dashboard + order-status feed.** Whatever you record appears on the Juspay merchant dashboard's fulfilment module **and** inside the order's subsequent `GET /orders/{order_id}` response payloads. Downstream merchant systems can consume from either surface and stay in sync.
+- `fulfillment_status="FULFILLED"` — shipped, delivered, service rendered.
+- `fulfillment_status="FAILED"` — logistics or merchant-side issue prevented delivery.
+- `fulfillment_status="PARTIAL_FULFILLED"` — split shipment / partial delivery.
+- `fulfillment_status="PENDING"` — in progress; an updating call is expected later.
 
-The fulfilment-rate metric (orders fulfilled / orders charged) on the dashboard is one downstream consumer of this data; the cross-system identity flow is a more common reason to wire the call in.
+A failed fulfilment is just as valid an event to record as a success — the API exists to capture both.
 
-Skip this card entirely only if the merchant doesn't care about either the dashboard signal **or** the order-status echo. Pure one-shot payment flows that complete at `CHARGED` and never need to feed fulfilment identity into other systems can omit it.
+Skip this card entirely if the merchant has no downstream use for recording fulfilment outcomes. The payment flow completes at `CHARGED` regardless.
 
 ## Prerequisites
 
