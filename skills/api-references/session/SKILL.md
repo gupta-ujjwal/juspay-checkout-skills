@@ -26,16 +26,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs". JWE variant (`POST /v4/
 
 ## Authentication
 
-KeyAuth, with two additional required headers:
-
-```http
-Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-x-routing-id: <customer_id_or_order_id>
-Content-Type: application/json
-```
-
-`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
+Standard KeyAuth set: `Authorization` + `x-merchantid` + `x-routing-id` + `Content-Type: application/json`. The headers are documented once in `skills/SKILL.md` §"Common request headers"; this route does not deviate from the baseline.
 
 ## Request body
 

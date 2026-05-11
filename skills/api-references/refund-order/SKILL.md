@@ -33,15 +33,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs".
 
 ## Authentication
 
-KeyAuth, with one additional required header — note that unlike session/order-status, the refund route does **not** require `x-routing-id`:
-
-```http
-Authorization: Basic <base64(api_key + ":")>
-x-merchantid: <merchant_id>
-Content-Type: application/x-www-form-urlencoded
-```
-
-`version: YYYY-MM-DD` is required for new integrations — see `foundations/authentication/`.
+KeyAuth with `Authorization` + `x-merchantid` + `Content-Type: application/x-www-form-urlencoded`. **The refund route does not require `x-routing-id`** — this is the one deviation from the standard header baseline in `skills/SKILL.md` §"Common request headers".
 
 ## Request body
 

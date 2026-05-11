@@ -30,18 +30,7 @@ Authorization: Basic <base64(api_key + ":")>
 
 HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
 
-#### Route-level headers
-
-The auth scheme reads only `Authorization`. Most KeyAuth-protected routes additionally require `x-merchantid` (always) and `x-routing-id` (most, but not all — e.g. refund). Header requirements vary per route — **consult the api-reference card for the route you're calling**; each card declares its full required-header set at the top. As an anchor example, `api-references/session/` requires `Authorization` + `x-merchantid` + `x-routing-id`; `api-references/refund-order/` requires `Authorization` + `x-merchantid` only.
-
-#### `version` header
-
-`version: YYYY-MM-DD` (a date string identifying the API version your integration was built against).
-
-- **Required** for new merchant integrations on KeyAuth-protected routes.
-- **Optional** for legacy integrations created before the header was introduced (the field is back-compat-tolerant; absence is accepted for those merchants but new integrations should always send it).
-
-Use today's date (or a fixed date you intend to pin) at integration time. Update it deliberately when you re-validate your integration against newer API behaviour.
+The standard KeyAuth header baseline (`Authorization` + `x-merchantid` + `x-routing-id`) is documented in `skills/SKILL.md` §"Common request headers". Per-route deviations are called out in each api-reference card.
 
 ### TokenAuth — SDK-issued client tokens
 

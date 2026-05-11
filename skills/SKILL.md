@@ -41,6 +41,28 @@ The same hosts serve every Juspay API in this bank:
 
 Each api-reference card lists the path it owns (e.g. `POST /session`, `GET /orders/{order_id}`). Combine `<host>/<path>` to construct the full URL.
 
+## Common request headers
+
+Every Juspay backend call in this bank uses **KeyAuth** with these headers:
+
+```http
+Authorization: Basic <base64(api_key + ":")>
+x-merchantid: <merchant_id>
+x-routing-id: <customer_id_or_order_id>
+Content-Type: <per-route — JSON or x-www-form-urlencoded>
+```
+
+- `Authorization` — HTTP Basic with the API key as username and an empty password (the trailing `:` is mandatory).
+- `x-merchantid` — your merchant ID from the dashboard.
+- `x-routing-id` — typically the `customer_id`; fall back to `order_id` for guest checkout.
+
+**Deviations from this baseline** (call out only where a route differs):
+
+- `api-references/refund-order/` — drops `x-routing-id`. Refunds need `Authorization` + `x-merchantid` only.
+- `api-references/order-status/` — adds a fourth required header: `version: YYYY-MM-DD` (set this to the date you built the integration and treat it as a static value).
+
+For the auth-scheme mechanics (encoding details, error symptoms), see `foundations/authentication/`.
+
 ## Layer contract
 
 ```text
