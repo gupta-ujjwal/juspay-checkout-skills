@@ -34,15 +34,15 @@ JWE variant (`GET /v4/order-status`) for merchants on encrypted endpoints — ga
 
 ## Authentication
 
-Standard KeyAuth set (`Authorization` + `x-merchantid` + `x-routing-id`) — see `skills/SKILL.md` §"Common request headers" — plus one route-specific required header:
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: application/json`. The three universal headers are required as documented in `skills/SKILL.md` §"Common request headers" — `x-routing-id` should match what the order/session was created with (typically the `customer_id`; falls back to `order_id` for guest).
+
+One route-specific additional header:
 
 ```http
 version: YYYY-MM-DD
 ```
 
 `version` identifies which API-response contract you built the integration against. **Set it to the date you wrote the integration (e.g. `2026-05-11`) and treat it as a static string.** Update it only when you deliberately re-validate the integration against newer API behaviour. Order-status is the one route in this bank where the `version` value actually shapes the response, so omitting it or pointing it at a moving target risks getting an unexpected response shape one day.
-
-`x-routing-id` should match what the order/session was created with (typically the `customer_id`); falls back to the `order_id` for guest checkout.
 
 ## Query parameters
 

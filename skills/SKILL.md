@@ -43,25 +43,21 @@ Each api-reference card lists the path it owns (e.g. `POST /session`, `GET /orde
 
 ## Common request headers
 
-Every Juspay backend call in this bank uses **KeyAuth** with these headers:
+Three headers are required on **every** Juspay backend call in this bank, regardless of auth scheme or route:
 
 ```http
-Authorization: Basic <base64(api_key + ":")>
 x-merchantid: <merchant_id>
 x-routing-id: <customer_id_or_order_id>
 Content-Type: <per-route — JSON or x-www-form-urlencoded>
 ```
 
-- `Authorization` — HTTP Basic with the API key as username and an empty password (the trailing `:` is mandatory).
 - `x-merchantid` — your merchant ID from the dashboard.
 - `x-routing-id` — typically the `customer_id`; fall back to `order_id` for guest checkout.
+- `Content-Type` — varies per route; each api-reference card lists the right value.
 
-**Deviations from this baseline** (call out only where a route differs):
+The **auth credential** is a fourth required header (or set of fields), but its form differs per scheme — `Authorization: Basic ...` for KeyAuth, signature querystring fields for SignatureAuth, JWE wrapping for `/v4/*`. The auth-scheme mechanics live in `foundations/authentication/`; each api-reference card declares which scheme its route expects.
 
-- `api-references/refund-order/` — drops `x-routing-id`. Refunds need `Authorization` + `x-merchantid` only.
-- `api-references/order-status/` — adds a fourth required header: `version: YYYY-MM-DD` (set this to the date you built the integration and treat it as a static value).
-
-For the auth-scheme mechanics (encoding details, error symptoms), see `foundations/authentication/`.
+Per-route additions (e.g. `version` on order-status) are documented in the api-reference card for that route.
 
 ## Layer contract
 

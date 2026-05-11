@@ -30,7 +30,7 @@ Authorization: Basic <base64(api_key + ":")>
 
 HTTP Basic with the API key as username and an empty password. The colon-suffixed empty password is mandatory.
 
-The standard KeyAuth header baseline (`Authorization` + `x-merchantid` + `x-routing-id`) is documented in `skills/SKILL.md` §"Common request headers". Per-route deviations are called out in each api-reference card.
+The three universal headers (`x-merchantid` + `x-routing-id` + `Content-Type`) are documented in `skills/SKILL.md` §"Common request headers" — they apply to **every** Juspay backend call regardless of auth scheme. The `Authorization` credential above is the KeyAuth-specific contribution; SignatureAuth and JWE replace it with their own credential carriage.
 
 ### TokenAuth — SDK-issued client tokens
 

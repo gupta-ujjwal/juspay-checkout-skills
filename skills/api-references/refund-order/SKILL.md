@@ -33,7 +33,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs".
 
 ## Authentication
 
-KeyAuth with `Authorization` + `x-merchantid` + `Content-Type: application/x-www-form-urlencoded`. **The refund route does not require `x-routing-id`** — this is the one deviation from the standard header baseline in `skills/SKILL.md` §"Common request headers".
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: application/x-www-form-urlencoded`. The three universal headers are required as documented in `skills/SKILL.md` §"Common request headers" — including `x-routing-id`. (The refund route requires the same header set as every other Juspay API.)
 
 ## Request body
 

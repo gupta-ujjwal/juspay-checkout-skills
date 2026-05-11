@@ -17,12 +17,12 @@ You're seeing a non-2xx response (or a 200 with an error envelope) and want to k
 
 ## Authentication / authorisation
 
-| Status | Code            | Cause                                                                                                                 | Fix                                                                                                                         |
-| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 401    | `access_denied` | `Authorization` header missing or malformed; API key not base64-encoded with the trailing `:`.                        | Encode the API key as `printf '%s:' "$API_KEY" \| base64`, send as `Authorization: Basic <result>`.                         |
-| 401    | _(unspecified)_ | `x-merchantid` header missing, or its value doesn't match the merchant the API key belongs to.                        | Send the merchant ID matching the API key. See `skills/SKILL.md` §"Common request headers".                                 |
-| 401    | _(route-mix)_   | Mixing schemes — sending KeyAuth credentials to a `POST /v2/orders` route that expects SignatureAuth (or vice-versa). | Look up the route's expected scheme in its api-reference card.                                                              |
-| 400    | _(unspecified)_ | `x-routing-id` missing on a route that requires it (session, order-status, customer routes).                          | Send `x-routing-id` (typically the `customer_id`; fall back to `order_id` for guest). Refund route does **not** require it. |
+| Status | Code            | Cause                                                                                                                       | Fix                                                                                                                                    |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 401    | `access_denied` | `Authorization` header missing or malformed; API key not base64-encoded with the trailing `:`.                              | Encode the API key as `printf '%s:' "$API_KEY" \| base64`, send as `Authorization: Basic <result>`.                                    |
+| 401    | _(unspecified)_ | `x-merchantid` header missing, or its value doesn't match the merchant the API key belongs to.                              | Send the merchant ID matching the API key. See `skills/SKILL.md` §"Common request headers".                                            |
+| 401    | _(route-mix)_   | Mixing schemes — sending KeyAuth credentials to a `POST /v2/orders` route that expects SignatureAuth (or vice-versa).       | Look up the route's expected scheme in its api-reference card.                                                                         |
+| 400    | _(unspecified)_ | `x-routing-id` missing on any route. Required across every Juspay backend API (session, order-status, refund, customer, …). | Send `x-routing-id` (typically the `customer_id`; fall back to `order_id` for guest). See `skills/SKILL.md` §"Common request headers". |
 
 ## Request body / validation
 

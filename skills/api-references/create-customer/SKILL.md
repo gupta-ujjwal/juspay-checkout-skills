@@ -32,7 +32,7 @@ Base URLs are listed in `skills/SKILL.md` §"Base URLs". The `{merchantCustomerI
 
 ## Authentication
 
-Standard KeyAuth set: `Authorization` + `x-merchantid` + `x-routing-id` + `Content-Type: application/json`. The headers are documented once in `skills/SKILL.md` §"Common request headers"; this route does not deviate from the baseline. `x-routing-id` for this route is typically the same `merchantCustomerId` you're posting.
+KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: application/json`. The three universal headers are required as documented in `skills/SKILL.md` §"Common request headers" — `x-routing-id` for this route is typically the same `merchantCustomerId` you're posting.
 
 ## Request body
 
