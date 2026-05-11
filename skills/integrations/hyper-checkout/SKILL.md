@@ -23,33 +23,20 @@ The alternatives — Express Checkout SDK (merchant hosts UI, Juspay's SDK handl
 - An active Juspay merchant account with `payment_page_client_id` provisioned.
 - A publicly reachable HTTPS endpoint registered as the merchant's webhook URL.
 
-## Architecture
+## Flow at a glance
 
 ```text
-                                      ┌───────────────────────────────┐
-                                      │           Juspay              │
-                                      │                               │
-   ┌──────────────┐   POST /session   │  ┌─────────────────────────┐  │
-   │              │ ────────────────▶ │  │   creates order +       │  │
-   │   merchant   │ ◀──── 200 ──────  │  │   returns sdk_payload + │  │
-   │   backend    │   sdk_payload     │  │   payment_links.web     │  │
-   │              │   payment_links   │  └─────────────────────────┘  │
-   │              │                   │             │                 │
-   └────┬─────────┘                   │             │ hosts page      │
-        │ ▲ ▲                         │             ▼                 │
-        │ │ │                         │  ┌─────────────────────────┐  │
-forward │ │ │ webhooks (ORDER_*)      │  │   payment page UX,      │  │
- to FE  │ │ └───────────────────────  │  │   gateway calls,        │  │
-        │ │   GET /orders/{order_id}  │  │   3DS / OTP / etc.      │  │
-        │ │ ─────────────────────────▶│  └─────────────────────────┘  │
-        ▼ │ ◀──── 200 ground truth    │             │                 │
-   ┌──────────────┐                   │             │ return_url      │
-   │   merchant   │                   │             │ +/or deeplink   │
-   │   frontend   │ ◀─────────────────┼─────────────┘                 │
-   │  (native or  │                   │                               │
-   │   web/mweb)  │                   └───────────────────────────────┘
-   └──────────────┘
+1. merchant backend  →  POST /session                                 →  Juspay
+2. Juspay             →  sdk_payload + payment_links.web              →  merchant backend
+3. merchant backend   →  hand off (native: sdk_payload; web: link)    →  merchant frontend
+4. merchant frontend ←→  hosted payment page (Juspay drives UI)        ←→  Juspay
+5. Juspay             →  webhook  AND/OR  return_url/handover         →  merchant
+6. merchant backend   →  GET /orders/{order_id}                       →  Juspay
+7. Juspay             →  authoritative order state                    →  merchant backend
+8. merchant backend   →  act on status (fulfill / fail / re-poll)
 ```
+
+Steps 1–3 are the outbound flow; steps 5–8 are the reconciliation loop. The hosted page (step 4) runs entirely on Juspay's side — the merchant's server is not on the critical path during payment itself.
 
 ## Backend sequence
 
