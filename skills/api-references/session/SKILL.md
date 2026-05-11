@@ -43,27 +43,32 @@ Content-Type: application/json
 
 ### Required fields
 
-| Field                    | Type                | Notes                                                                                 |
-| ------------------------ | ------------------- | ------------------------------------------------------------------------------------- |
-| `order_id`               | string              | Merchant's unique order ID. Alphanumeric, ≤ 21 characters.                            |
-| `amount`                 | stringified decimal | Two decimal places, e.g. `"100.00"`.                                                  |
-| `customer_id`            | string              | Merchant's customer ID; pass `""` for guest checkout.                                 |
-| `customer_email`         | string              | Customer email.                                                                       |
-| `customer_phone`         | string              | Customer phone (no country-code prefix).                                              |
-| `payment_page_client_id` | string              | Juspay-issued client ID for the merchant's payment page.                              |
-| `action`                 | string              | `"paymentPage"` (regular checkout) or `"paymentManagement"` (manage payment methods). |
-| `return_url`             | string              | Fully qualified URL the customer is redirected to after payment.                      |
+| Field                    | Type                | Notes                                                                                                   |
+| ------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `order_id`               | string              | Merchant's unique order ID. Alphanumeric, ≤ 21 characters.                                              |
+| `amount`                 | stringified decimal | Two decimal places, e.g. `"100.00"`. Rejection on absence: `"Mandatory fields are missing"`.            |
+| `payment_page_client_id` | string              | Juspay-issued client ID for the merchant's payment page. Rejection: `PAYMENT_PAGE_CLIENT_ID_NOT_FOUND`. |
 
-### Common optional fields
+### Conditionally required
 
-| Field                                  | Type   | Notes                                                     |
-| -------------------------------------- | ------ | --------------------------------------------------------- |
-| `currency`                             | string | Three-letter currency code (e.g. `SGD`, `INR`).           |
-| `description`                          | string | Order description shown on the hosted page (≤ 255 chars). |
-| `language`                             | string | `EN` / `TH` / `VI` / `ID` / `KO`. Default `EN`.           |
-| `first_name`, `last_name`              | string | Customer name fields.                                     |
-| `udf1` … `udf10`                       | string | User-defined pass-through fields.                         |
-| `metadata.JUSPAY:gateway_reference_id` | string | Optional gateway reference.                               |
+| Field         | Required when                                                                     | Notes                                                                                                                               |
+| ------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `customer_id` | `action="paymentManagement"`, **or** the request enables a mandate flow (Phase 2) | Rejection: `CUSTOMER_ID_NOT_FOUND`. For regular `paymentPage` checkouts without mandates, the field is optional and can be omitted. |
+
+### Optional fields
+
+| Field                                  | Type   | Notes                                                                                                                               |
+| -------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `action`                               | string | `"paymentPage"` (default) or `"paymentManagement"` (manage payment methods).                                                        |
+| `currency`                             | string | Three-letter currency code (e.g. `SGD`, `INR`). **Defaults to `"INR"` if omitted** — set explicitly for non-IN markets.             |
+| `return_url`                           | string | Fully qualified URL the customer is redirected to after payment. Omit and the SDK returns control to the merchant frontend instead. |
+| `customer_email`                       | string | Customer email. Useful for receipts and risk scoring but not required.                                                              |
+| `customer_phone`                       | string | Customer phone (no country-code prefix).                                                                                            |
+| `description`                          | string | Order description shown on the hosted page (≤ 255 chars).                                                                           |
+| `language`                             | string | `EN` / `TH` / `VI` / `ID` / `KO`. Default `EN`.                                                                                     |
+| `first_name`, `last_name`              | string | Customer name fields.                                                                                                               |
+| `udf1` … `udf10`                       | string | User-defined pass-through fields.                                                                                                   |
+| `metadata.JUSPAY:gateway_reference_id` | string | Optional gateway reference.                                                                                                         |
 
 ### Out of scope for Phase 1
 
