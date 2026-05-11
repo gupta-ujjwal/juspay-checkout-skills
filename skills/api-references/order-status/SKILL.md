@@ -24,12 +24,11 @@ Do **not** trust the webhook body's `content.order` snapshot as final state — 
 
 ## Endpoint
 
-| Environment | URL                                               |
-| ----------- | ------------------------------------------------- |
-| Sandbox     | `GET https://sandbox.juspay.in/orders/{order_id}` |
-| Production  | `GET https://api.juspay.in/orders/{order_id}`     |
+```
+GET /orders/{order_id}
+```
 
-The `{order_id}` is the merchant's `order_id` from session/order create. Use the path-parameter form on new integrations.
+Base URLs are listed in `skills/SKILL.md` §"Base URLs". The `{order_id}` is the merchant's `order_id` from session/order create. Use the path-parameter form on new integrations.
 
 JWE variant (`GET /v4/order-status`) for merchants on encrypted endpoints — gated by account-level encryption keys (`basiliskKeyId`), deferred to Phase 2. Do **not** use the legacy `/orderStatus?order_id=` query-param form on new integrations — it exists for backward-compat with older merchants only.
 

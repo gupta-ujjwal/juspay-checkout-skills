@@ -25,10 +25,11 @@ If you only need to read the current refund state of an order, call `GET /orders
 
 ## Endpoint
 
-| Environment | URL                                                        |
-| ----------- | ---------------------------------------------------------- |
-| Sandbox     | `POST https://sandbox.juspay.in/orders/{order_id}/refunds` |
-| Production  | `POST https://api.juspay.in/orders/{order_id}/refunds`     |
+```
+POST /orders/{order_id}/refunds
+```
+
+Base URLs are listed in `skills/SKILL.md` §"Base URLs".
 
 ## Authentication
 

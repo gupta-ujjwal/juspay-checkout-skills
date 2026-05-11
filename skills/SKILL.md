@@ -30,6 +30,17 @@ Every integration depends on:
 
 API references (Phase 1B-HC: `api-references/{session, order-status, refund-order}/`) own the payload shapes; integrations link to them rather than re-document.
 
+## Base URLs
+
+The same hosts serve every Juspay API in this bank:
+
+| Environment | Host                        |
+| ----------- | --------------------------- |
+| Sandbox     | `https://sandbox.juspay.in` |
+| Production  | `https://api.juspay.in`     |
+
+Each api-reference card lists the path it owns (e.g. `POST /session`, `GET /orders/{order_id}`). Combine `<host>/<path>` to construct the full URL.
+
 ## Layer contract
 
 ```text

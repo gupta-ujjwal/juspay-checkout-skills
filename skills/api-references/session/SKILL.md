@@ -18,12 +18,11 @@ You're implementing the HyperCheckout backend on the merchant server and need to
 
 ## Endpoint
 
-| Environment | URL                                      |
-| ----------- | ---------------------------------------- |
-| Sandbox     | `POST https://sandbox.juspay.in/session` |
-| Production  | `POST https://api.juspay.in/session`     |
+```
+POST /session
+```
 
-JWE variant (`POST /v4/session`) exists for merchants on encrypted endpoints — gated by account-level encryption keys (`basiliskKeyId`), deferred to Phase 2 (see [`README.md`](../../../README.md) §"Phase 1 omissions").
+Base URLs are listed in `skills/SKILL.md` §"Base URLs". JWE variant (`POST /v4/session`) exists for merchants on encrypted endpoints — gated by account-level encryption keys (`basiliskKeyId`), deferred to Phase 2 (see [`README.md`](../../../README.md) §"Phase 1 omissions").
 
 ## Authentication
 
