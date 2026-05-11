@@ -22,7 +22,8 @@ The alternatives — Express Checkout SDK (merchant hosts UI, Juspay's SDK handl
 - `api-references/session/` — `POST /session` payload and response.
 - `api-references/order-status/` — `GET /orders/{order_id}` payload and status enum.
 - `api-references/refund-order/` — `POST /orders/{order_id}/refunds`.
-- `api-references/create-customer/` — `POST /v2/customers/{merchantCustomerId}` (logged-in flows only).
+- `api-references/create-customer/` — `POST /v2/customers/{merchantCustomerId}` (saved-PM / wallet / mandate / analytics-scoped flows).
+- `api-references/order-fulfillment/` — `POST /orders/{order_id}/fulfillment` (optional, post-CHARGED analytics).
 - An active Juspay merchant account with `payment_page_client_id` provisioned.
 - A publicly reachable HTTPS endpoint registered as the merchant's webhook URL.
 
@@ -37,9 +38,10 @@ The alternatives — Express Checkout SDK (merchant hosts UI, Juspay's SDK handl
 6. merchant backend   →  GET /orders/{order_id}                       →  Juspay
 7. Juspay             →  authoritative order state                    →  merchant backend
 8. merchant backend   →  act on status (fulfill / fail / re-poll)
+9. merchant backend   →  POST /orders/{order_id}/fulfillment (opt.)   →  Juspay
 ```
 
-Steps 1–3 are the outbound flow; steps 5–8 are the reconciliation loop. The hosted page (step 4) runs entirely on Juspay's side — the merchant's server is not on the critical path during payment itself.
+Steps 1–3 are the outbound flow; 5–8 are the reconciliation loop; 9 closes the analytics loop after fulfilment. The hosted page (step 4) runs entirely on Juspay's side — the merchant's server is not on the critical path during payment itself.
 
 ## Backend sequence
 
@@ -128,6 +130,12 @@ The `status → action` mapping is generic across all Juspay integrations (Hyper
 - `PENDING_VBV`, `AUTHORIZING`, `NEW` → not terminal; re-poll or wait for the next webhook.
 
 For the full table covering all 23 status values and the catch-all unknown-status policy, see `foundations/order-status-actions/`. For the error catalogue when the API itself returns a 4xx/5xx, see `foundations/error-codes/`.
+
+### Step 7 — Record fulfilment (optional, post-`CHARGED`)
+
+After the merchant has actually delivered on a `CHARGED` order (shipped the goods, granted access, etc.), optionally call `POST /orders/{order_id}/fulfillment` to tell Juspay the loop closed. Juspay uses this for **fulfilment-rate analytics** on the dashboard — `orders fulfilled / orders charged` over the merchant's history.
+
+This step is **good-to-have, not required for the payment flow**. Skipping it leaves Juspay's fulfilment-rate metric at zero for the merchant; nothing else breaks. Payload + commands: `api-references/order-fulfillment/`.
 
 ## Refunds (sub-sequence)
 
