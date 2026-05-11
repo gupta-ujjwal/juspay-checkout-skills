@@ -50,23 +50,20 @@ KeyAuth — `Authorization: Basic <base64(api_key + ":")>`. `Content-Type: appli
 | `fulfillment_status`  | enum | Outcome of fulfilment. Common values: `FULFILLED` (delivered successfully), `PARTIAL_FULFILLED` (some items shipped), `FAILED` (logistics or merchant-side issue prevented fulfilment), `PENDING` (in progress; expect an update).       |
 | `fulfillment_command` | enum | What the merchant is asking Juspay to record. The most common is `MARK_FULFILLED` (record this as the canonical fulfilment event). Other commands exist for tagged sub-events; consult Juspay support if standard `MARK_*` isn't enough. |
 
-### Recommended (technically optional, but use them)
+### Optional fields
 
-| Field              | Type   | Notes                                                                                                                                                                                                                                                                                                             |
-| ------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `fulfillment_id`   | string | **The merchant's identifier for this fulfilment.** Examples: airline PNR, hotel booking ID, e-commerce order ID, shipment / waybill ID, service ticket ID. Juspay echoes this verbatim on the dashboard and in subsequent `GET /orders/{order_id}` responses, so downstream merchant systems can cross-reference. |
-| `fulfillment_data` | string | Free-form JSON-encoded blob for merchant-specific structured metadata (courier name, tracking URL, line items, fulfilment notes, …). Round-trips through Juspay alongside `fulfillment_id`.                                                                                                                       |
-| `fulfillment_time` | string | ISO 8601 timestamp of when fulfilment actually occurred. Defaults to call-receipt time if absent.                                                                                                                                                                                                                 |
+In practice, almost every caller passes `fulfillment_id`, `fulfillment_data`, and `fulfillment_time` — they're what make the recorded event useful for cross-system reconciliation on the merchant side. The rest are situational.
 
-### Other optional fields
-
-| Field                      | Type   | Notes                                                                                                                        |
-| -------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `invoice_details`          | string | Merchant invoice reference, if the merchant has issued an invoice.                                                           |
-| `refund_amount`            | string | If fulfilment failed and the merchant has already refunded the customer, pass the refunded amount for analytics correlation. |
-| `imei`                     | string | Device IMEI for high-risk fulfilment categories (electronics); used in fraud analytics.                                      |
-| `product_details`          | array  | Per-line-item fulfilment status (when the order has multiple SKUs).                                                          |
-| `split_settlement_details` | object | Used in split-settlement / marketplace flows to attribute fulfilment to specific sub-merchants.                              |
+| Field                      | Type   | Notes                                                                                                                                                                |
+| -------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fulfillment_id`           | string | Opaque merchant-side identifier for this fulfilment — the merchant's own canonical reference for the event. Treated as a free-form string; Juspay imposes no format. |
+| `fulfillment_data`         | string | Free-form JSON-encoded blob for merchant-specific structured metadata (tracking number, courier name, line items, fulfilment notes, anything else).                  |
+| `fulfillment_time`         | string | ISO 8601 timestamp of when fulfilment actually occurred. Defaults to call-receipt time if absent.                                                                    |
+| `invoice_details`          | string | Merchant invoice reference, if the merchant has issued an invoice.                                                                                                   |
+| `refund_amount`            | string | If fulfilment failed and the merchant has already refunded the customer, pass the refunded amount for analytics correlation.                                         |
+| `imei`                     | string | Device IMEI for high-risk fulfilment categories (electronics); used in fraud analytics.                                                                              |
+| `product_details`          | array  | Per-line-item fulfilment status (when the order has multiple SKUs).                                                                                                  |
+| `split_settlement_details` | object | Used in split-settlement / marketplace flows to attribute fulfilment to specific sub-merchants.                                                                      |
 
 ## Response
 
