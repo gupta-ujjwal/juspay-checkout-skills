@@ -12,9 +12,11 @@ The structural framework — five layers, `SKILL.md` anatomy, naming, splitting 
 
 ## Source of truth
 
-**Code beats docs, every time.** When the public docs at `juspay.io/sea/docs/` and the source at `~/juspay/euler-workspace-5/` disagree, code wins. The docs contradict themselves on Content-Type, omit auth schemes, and lag the implementation. Every claim in a skill card — endpoint path, field name, validation rule, error code, enablement gate — must be traceable to a file:line in `euler-workspace-5/`.
+**Code beats docs, every time.** When the public docs at `juspay.io/sea/docs/` and the source at `~/juspay/euler-workspace-5/` disagree, code wins. The docs contradict themselves on Content-Type, omit auth schemes, and lag the implementation. Every claim in a skill card — endpoint path, field name, validation rule, error code, enablement gate — must be **verified** against `euler-workspace-5/` at authoring time.
 
-When skill cards reference a Juspay endpoint, use the **public path** (sandbox `https://sandbox.juspay.in`, prod `https://api.juspay.in`). Internal Servant routes carry an `/ecr` prefix that the edge proxy strips.
+**No internal code references in merchant-facing cards.** Cards under `skills/` are merchant-facing artifacts. Merchants don't have access to `euler-workspace-5/` and shouldn't see internal repo paths, Haskell type names (`OrderStatusUrlCapture`, `withXRoutingId`, `whitelistedRef`), or file:line citations in card prose. The bank's authority comes from being correct, not from showing its homework. **Verification stays at authoring time; citations live in maintainer files only** — [`reference-data.md`](./reference-data.md), this file, and `CLAUDE.md`. When a card needs to name an account-level configuration the merchant interacts with (e.g. `enabledInstantRefund`), name the field but drop the `MerchantAccount.` prefix and the source citation.
+
+When skill cards reference a Juspay endpoint, use the **public path** (sandbox `https://sandbox.juspay.in`, prod `https://api.juspay.in`). Internal Servant routes carry an `/ecr` prefix that the edge proxy strips — that mechanism is maintainer trivia and doesn't belong in cards either.
 
 ## Doc fetching recipe
 
